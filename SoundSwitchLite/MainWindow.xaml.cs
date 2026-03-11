@@ -332,6 +332,8 @@ public partial class MainWindow : Window
     {
         if (slot.SelectedDevice == null) return;
 
+        // Effective volume = MasterVolume% of BaseVolume.
+        // E.g. Master=80, Base=75 → 0.80 × 75 = 60 %.
         int effectiveVolume = (int)Math.Round(_viewModel.MasterVolume / 100.0 * slot.BaseVolume);
 
         if (slot.IsInput)
@@ -412,10 +414,11 @@ public partial class MainWindow : Window
     {
         if (sender is TextBox tb && tb.DataContext is DeviceSlotViewModel slot)
         {
+            // Parse and clamp; reset display if the field is empty or non-numeric.
             if (int.TryParse(tb.Text, out int val))
-                slot.BaseVolume = val; // clamped by setter
+                slot.BaseVolume = val; // property setter clamps to 0-100
             else
-                tb.Text = slot.BaseVolume.ToString();
+                tb.Text = slot.BaseVolume.ToString(); // restore last valid value
             SaveSettings();
         }
     }
