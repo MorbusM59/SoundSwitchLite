@@ -17,6 +17,8 @@ public class DeviceSlotViewModel : INotifyPropertyChanged
     private string _hotkeyDisplay = "Click to assign hotkey";
     private int _modifiers;
     private int _key;
+    private int _defaultVolume = 50;
+    private bool _enforceVolume;
     public int HotkeyId { get; set; } = -1;
 
     public ObservableCollection<AudioDevice> AvailableDevices { get; } = new();
@@ -55,6 +57,20 @@ public class DeviceSlotViewModel : INotifyPropertyChanged
     {
         get => _key;
         set { _key = value; OnPropertyChanged(); }
+    }
+
+    /// <summary>Volume percentage (0–100) to apply when this device is activated.</summary>
+    public int DefaultVolume
+    {
+        get => _defaultVolume;
+        set { _defaultVolume = Math.Clamp(value, 0, 100); OnPropertyChanged(); }
+    }
+
+    /// <summary>When true, DefaultVolume is applied whenever this device is activated.</summary>
+    public bool EnforceVolume
+    {
+        get => _enforceVolume;
+        set { _enforceVolume = value; OnPropertyChanged(); }
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -142,6 +158,18 @@ public partial class MainWindow : Window
                     RegisterSlotHotkey(slot);
                 }
 
+                // Restore volume settings; seed from current device volume if not yet saved
+                if (mapping.DefaultVolume.HasValue)
+                {
+                    slot.DefaultVolume = mapping.DefaultVolume.Value;
+                }
+                else if (device != null)
+                {
+                    var currentVol = await _audioService.GetVolumeAsync(device.Id);
+                    slot.DefaultVolume = currentVol ?? 50;
+                }
+                slot.EnforceVolume = mapping.EnforceVolume;
+
                 _viewModel.DeviceSlots.Add(slot);
             }
         }
@@ -189,16 +217,42 @@ public partial class MainWindow : Window
     {
         if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot && slot.SelectedDevice != null)
         {
-            await _audioService.SetDefaultDeviceAsync(slot.SelectedDevice.Id);
-            await RefreshActiveDevice();
-            ShowBalloon($"Switched to: {slot.SelectedDevice.Name}");
+            await ActivateSlotDeviceAsync(slot);
         }
     }
 
-    private void DeviceComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    private async Task ActivateSlotDeviceAsync(DeviceSlotViewModel slot)
     {
+        if (slot.SelectedDevice == null) return;
+        await _audioService.SetDefaultDeviceAsync(slot.SelectedDevice.Id);
+        if (slot.EnforceVolume)
+            await _audioService.SetVolumeAsync(slot.SelectedDevice.Id, slot.DefaultVolume);
+        await RefreshActiveDevice();
+        ShowBalloon($"Switched to: {slot.SelectedDevice.Name}");
+    }
+
+    private async void DeviceComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        // Seed the default volume from the device's current volume when a new device is chosen
+        if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot
+            && slot.SelectedDevice != null && e.AddedItems.Count > 0)
+        {
+            var currentVol = await _audioService.GetVolumeAsync(slot.SelectedDevice.Id);
+            if (currentVol.HasValue)
+                slot.DefaultVolume = currentVol.Value;
+        }
         SaveSettings();
         UpdateAddButtonVisibility();
+    }
+
+    private void VolumeEnforce_Changed(object sender, RoutedEventArgs e)
+    {
+        SaveSettings();
+    }
+
+    private void VolumeSlider_ValueChanged(object sender, System.Windows.RoutedPropertyChangedEventArgs<double> e)
+    {
+        SaveSettings();
     }
 
     private void HotkeyField_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -321,12 +375,7 @@ public partial class MainWindow : Window
         {
             await Dispatcher.InvokeAsync(async () =>
             {
-                if (capturedSlot.SelectedDevice != null)
-                {
-                    await _audioService.SetDefaultDeviceAsync(capturedSlot.SelectedDevice.Id);
-                    await RefreshActiveDevice();
-                    ShowBalloon($"Switched to: {capturedSlot.SelectedDevice.Name}");
-                }
+                await ActivateSlotDeviceAsync(capturedSlot);
             });
         });
         slot.HotkeyId = id;
@@ -401,7 +450,9 @@ public partial class MainWindow : Window
                     DeviceId = s.SelectedDevice?.Id ?? string.Empty,
                     DeviceName = s.SelectedDevice?.Name ?? string.Empty,
                     ModifierKeys = s.ModifierKeys,
-                    Key = s.Key
+                    Key = s.Key,
+                    DefaultVolume = s.DefaultVolume,
+                    EnforceVolume = s.EnforceVolume
                 })
                 .ToList()
         };

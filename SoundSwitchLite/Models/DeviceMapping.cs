@@ -12,4 +12,12 @@ public class DeviceMapping
     /// Virtual-key code (VK_*), e.g. 49 = '1', 50 = '2'
     /// </summary>
     public int Key { get; set; }
+    /// <summary>
+    /// Default volume percentage (0–100). Null means no saved value.
+    /// </summary>
+    public int? DefaultVolume { get; set; }
+    /// <summary>
+    /// When true, the volume is set to DefaultVolume whenever this device is activated.
+    /// </summary>
+    public bool EnforceVolume { get; set; }
 }

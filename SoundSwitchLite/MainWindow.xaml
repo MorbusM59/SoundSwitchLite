@@ -24,6 +24,9 @@
         <converters:BoolToBrushConverter x:Key="ActiveForegroundBrush"
             TrueBrush="#FFFFFF"
             FalseBrush="#666680" />
+        <converters:BoolToOpacityConverter x:Key="OpacityConverter"
+            TrueOpacity="1.0"
+            FalseOpacity="0.4" />
 
         <Style x:Key="DarkComboBoxItem" TargetType="ComboBoxItem">
             <Setter Property="Background" Value="#2A2A3E"/>
@@ -190,104 +193,153 @@
                             <Border Margin="0,0,0,10" CornerRadius="12" Padding="12,10"
                                     Background="#25253A" BorderThickness="1.5"
                                     BorderBrush="{Binding IsActive, Converter={StaticResource ActiveBorderBrush}}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="44"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="160"/>
-                                        <ColumnDefinition Width="36"/>
-                                    </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="44"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="160"/>
+                                            <ColumnDefinition Width="36"/>
+                                        </Grid.ColumnDefinitions>
 
-                                    <Button Grid.Column="0" Width="36" Height="36"
-                                            Click="PlayButton_Click" Tag="{Binding}"
-                                            Cursor="Hand" ToolTip="Set as default output device">
-                                        <Button.Background>
-                                            <Binding Path="IsActive" Converter="{StaticResource ActiveButtonBrush}"/>
-                                        </Button.Background>
-                                        <Button.Style>
-                                            <Style TargetType="Button">
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="Button">
-                                                            <Border Background="{TemplateBinding Background}" CornerRadius="18" Width="36" Height="36">
-                                                                <TextBlock Text="&#9654;"
-                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                           Foreground="{Binding IsActive, Converter={StaticResource ActiveForegroundBrush}}"
-                                                                           FontSize="13" Margin="2,0,0,0"/>
-                                                            </Border>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter Property="Opacity" Value="0.85"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </Button.Style>
-                                    </Button>
+                                        <Button Grid.Column="0" Width="36" Height="36"
+                                                Click="PlayButton_Click" Tag="{Binding}"
+                                                Cursor="Hand" ToolTip="Set as default output device">
+                                            <Button.Background>
+                                                <Binding Path="IsActive" Converter="{StaticResource ActiveButtonBrush}"/>
+                                            </Button.Background>
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}" CornerRadius="18" Width="36" Height="36">
+                                                                    <TextBlock Text="&#9654;"
+                                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                               Foreground="{Binding IsActive, Converter={StaticResource ActiveForegroundBrush}}"
+                                                                               FontSize="13" Margin="2,0,0,0"/>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter Property="Opacity" Value="0.85"/>
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
 
-                                    <ComboBox Grid.Column="1" Margin="10,0,10,0"
-                                              Style="{StaticResource DarkComboBox}"
-                                              ItemsSource="{Binding AvailableDevices}"
-                                              SelectedItem="{Binding SelectedDevice, Mode=TwoWay}"
-                                              DisplayMemberPath="Name"
-                                              SelectionChanged="DeviceComboBox_SelectionChanged"
-                                              Tag="{Binding}"/>
+                                        <ComboBox Grid.Column="1" Margin="10,0,10,0"
+                                                  Style="{StaticResource DarkComboBox}"
+                                                  ItemsSource="{Binding AvailableDevices}"
+                                                  SelectedItem="{Binding SelectedDevice, Mode=TwoWay}"
+                                                  DisplayMemberPath="Name"
+                                                  SelectionChanged="DeviceComboBox_SelectionChanged"
+                                                  Tag="{Binding}"/>
 
-                                    <Border Grid.Column="2" Height="36" CornerRadius="8"
-                                            Cursor="Hand"
-                                            MouseLeftButtonDown="HotkeyField_MouseLeftButtonDown"
-                                            MouseRightButtonDown="HotkeyField_MouseRightButtonDown"
-                                            Tag="{Binding}"
-                                            ToolTip="Left-click to assign hotkey; right-click to clear">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background" Value="#2A2A3E"/>
-                                                <Setter Property="BorderThickness" Value="1"/>
-                                                <Setter Property="BorderBrush" Value="#444460"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsListening}" Value="True">
-                                                        <Setter Property="BorderBrush" Value="#6C63FF"/>
-                                                        <Setter Property="Background" Value="#2E2A4A"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <TextBlock Text="{Binding HotkeyDisplay}"
-                                                   Foreground="#C0BFDB" FontSize="12"
-                                                   VerticalAlignment="Center" HorizontalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                    </Border>
+                                        <Border Grid.Column="2" Height="36" CornerRadius="8"
+                                                Cursor="Hand"
+                                                MouseLeftButtonDown="HotkeyField_MouseLeftButtonDown"
+                                                MouseRightButtonDown="HotkeyField_MouseRightButtonDown"
+                                                Tag="{Binding}"
+                                                ToolTip="Left-click to assign hotkey; right-click to clear">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="#2A2A3E"/>
+                                                    <Setter Property="BorderThickness" Value="1"/>
+                                                    <Setter Property="BorderBrush" Value="#444460"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsListening}" Value="True">
+                                                            <Setter Property="BorderBrush" Value="#6C63FF"/>
+                                                            <Setter Property="Background" Value="#2E2A4A"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="{Binding HotkeyDisplay}"
+                                                       Foreground="#C0BFDB" FontSize="12"
+                                                       VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </Border>
 
-                                    <Button Grid.Column="3" Width="28" Height="28" Margin="6,0,0,0"
-                                            Click="RemoveSlot_Click" Tag="{Binding}"
-                                            Cursor="Hand" ToolTip="Remove this slot">
-                                        <Button.Style>
-                                            <Style TargetType="Button">
-                                                <Setter Property="Background" Value="Transparent"/>
-                                                <Setter Property="Foreground" Value="#666680"/>
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="Button">
-                                                            <Border Background="{TemplateBinding Background}" CornerRadius="6" Width="28" Height="28">
-                                                                <TextBlock Text="&#x2715;"
-                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                           Foreground="{TemplateBinding Foreground}" FontSize="12"/>
-                                                            </Border>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter Property="Background" Value="#3D2A3A"/>
-                                                                    <Setter Property="Foreground" Value="#FF6680"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </Button.Style>
-                                    </Button>
-                                </Grid>
+                                        <Button Grid.Column="3" Width="28" Height="28" Margin="6,0,0,0"
+                                                Click="RemoveSlot_Click" Tag="{Binding}"
+                                                Cursor="Hand" ToolTip="Remove this slot">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Foreground" Value="#666680"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}" CornerRadius="6" Width="28" Height="28">
+                                                                    <TextBlock Text="&#x2715;"
+                                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                               Foreground="{TemplateBinding Foreground}" FontSize="12"/>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter Property="Background" Value="#3D2A3A"/>
+                                                                        <Setter Property="Foreground" Value="#FF6680"/>
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </Grid>
+
+                                    <!-- Volume row -->
+                                    <Grid Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <CheckBox Grid.Column="0"
+                                                  IsChecked="{Binding EnforceVolume, Mode=TwoWay}"
+                                                  Checked="VolumeEnforce_Changed"
+                                                  Unchecked="VolumeEnforce_Changed"
+                                                  Foreground="#C0BFDB" FontSize="12"
+                                                  VerticalAlignment="Center"
+                                                  ToolTip="Enforce this volume when activating the device"
+                                                  Content="Default volume:"/>
+
+                                        <Grid Grid.Column="1" Margin="8,0,44,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Slider Grid.Column="0"
+                                                    Minimum="0" Maximum="100"
+                                                    Value="{Binding DefaultVolume, Mode=TwoWay}"
+                                                    VerticalAlignment="Center"
+                                                    IsEnabled="{Binding EnforceVolume}"
+                                                    ValueChanged="VolumeSlider_ValueChanged"
+                                                    ToolTip="{Binding DefaultVolume, StringFormat='{}{0}%'}">
+                                                <Slider.Style>
+                                                    <Style TargetType="Slider">
+                                                        <Setter Property="Foreground" Value="#6C63FF"/>
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsEnabled" Value="False">
+                                                                <Setter Property="Opacity" Value="0.4"/>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Slider.Style>
+                                            </Slider>
+                                            <TextBlock Grid.Column="1" Margin="8,0,0,0"
+                                                       Text="{Binding DefaultVolume, StringFormat='{}{0}%'}"
+                                                       Foreground="#C0BFDB" FontSize="12"
+                                                       VerticalAlignment="Center" Width="36"
+                                                       Opacity="{Binding EnforceVolume, Converter={StaticResource OpacityConverter}}"/>
+                                        </Grid>
+                                    </Grid>
+                                </StackPanel>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>

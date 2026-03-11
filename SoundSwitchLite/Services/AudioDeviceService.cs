@@ -59,6 +59,39 @@ public class AudioDeviceService : IDisposable
         }
     }
 
+    /// <summary>Returns the current volume (0–100) for the given device, or null on failure.</summary>
+    public async Task<int?> GetVolumeAsync(string deviceId)
+    {
+        try
+        {
+            var devices = await _controller.GetPlaybackDevicesAsync(DeviceState.Active);
+            var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
+            if (device == null) return null;
+            return (int)Math.Round(device.Volume);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Sets the volume (0–100) for the given device. Returns true on success.</summary>
+    public async Task<bool> SetVolumeAsync(string deviceId, int volume)
+    {
+        try
+        {
+            var devices = await _controller.GetPlaybackDevicesAsync(DeviceState.Active);
+            var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
+            if (device == null) return false;
+            await device.SetVolumeAsync(Math.Clamp(volume, 0, 100));
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public void Dispose()
     {
         (_controller as IDisposable)?.Dispose();
