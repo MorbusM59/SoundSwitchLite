@@ -179,8 +179,9 @@ public partial class MainWindow : Window
             .Where(s => s.SelectedDevice != null)
             .Select(s => s.SelectedDevice!.Id)
             .ToHashSet();
-        _viewModel.CanAddDevice = _allDevices.Any(d => !usedDeviceIds.Contains(d.Id))
-                                  && _viewModel.DeviceSlots.Count < _allDevices.Count;
+        bool hasUnassignedDevices = _allDevices.Any(d => !usedDeviceIds.Contains(d.Id));
+        bool slotsUnderDeviceCount = usedDeviceIds.Count < _allDevices.Count;
+        _viewModel.CanAddDevice = hasUnassignedDevices && slotsUnderDeviceCount;
         AddDeviceButton.Visibility = _viewModel.CanAddDevice ? Visibility.Visible : Visibility.Collapsed;
     }
 
