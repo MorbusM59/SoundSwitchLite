@@ -146,7 +146,7 @@
             </Border>
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="16,12,16,0">
-                <ItemsControl x:Name="DeviceSlotsControl">
+                <ItemsControl x:Name="DeviceSlotsControl" ItemsSource="{Binding DeviceSlots}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border Margin="0,0,0,10" CornerRadius="12" Padding="12,10"
