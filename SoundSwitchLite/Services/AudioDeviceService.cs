@@ -12,6 +12,11 @@ public class AudioDevice
 public class AudioDeviceService : IDisposable
 {
     private readonly CoreAudioController _controller;
+    private IEnumerable<dynamic>? _playbackCache;
+    private DateTime _playbackCacheAt = DateTime.MinValue;
+    private IEnumerable<dynamic>? _captureCache;
+    private DateTime _captureCacheAt = DateTime.MinValue;
+    private readonly TimeSpan _cacheDuration = TimeSpan.FromSeconds(1);
 
     public AudioDeviceService()
     {
@@ -20,7 +25,7 @@ public class AudioDeviceService : IDisposable
 
     public async Task<IEnumerable<AudioDevice>> GetPlaybackDevicesAsync()
     {
-        var devices = await _controller.GetPlaybackDevicesAsync(DeviceState.Active);
+        var devices = await GetPlaybackDeviceObjectsAsync();
         return devices.Select(d => new AudioDevice { Id = d.Id.ToString(), Name = d.FullName });
     }
 
@@ -34,7 +39,7 @@ public class AudioDeviceService : IDisposable
     {
         try
         {
-            var devices = await _controller.GetPlaybackDevicesAsync(DeviceState.Active);
+            var devices = await GetPlaybackDeviceObjectsAsync();
             var target = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
             if (target == null) return false;
             return await target.SetAsDefaultAsync();
@@ -49,7 +54,7 @@ public class AudioDeviceService : IDisposable
     {
         try
         {
-            var devices = await _controller.GetPlaybackDevicesAsync(DeviceState.Active);
+            var devices = await GetPlaybackDeviceObjectsAsync();
             var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
             return device?.FullName;
         }
@@ -64,7 +69,7 @@ public class AudioDeviceService : IDisposable
     {
         try
         {
-            var devices = await _controller.GetPlaybackDevicesAsync(DeviceState.Active);
+            var devices = await GetPlaybackDeviceObjectsAsync();
             var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
             if (device == null) return null;
             return (int)Math.Round(device.Volume);
@@ -80,7 +85,7 @@ public class AudioDeviceService : IDisposable
     {
         try
         {
-            var devices = await _controller.GetPlaybackDevicesAsync(DeviceState.Active);
+            var devices = await GetPlaybackDeviceObjectsAsync();
             var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
             if (device == null) return false;
             await device.SetVolumeAsync(Math.Clamp(volume, 0, 100));
@@ -95,7 +100,7 @@ public class AudioDeviceService : IDisposable
     /// <summary>Returns all active capture (microphone/input) devices.</summary>
     public async Task<IEnumerable<AudioDevice>> GetCaptureDevicesAsync()
     {
-        var devices = await _controller.GetCaptureDevicesAsync(DeviceState.Active);
+        var devices = await GetCaptureDeviceObjectsAsync();
         return devices.Select(d => new AudioDevice { Id = d.Id.ToString(), Name = d.FullName });
     }
 
@@ -111,7 +116,7 @@ public class AudioDeviceService : IDisposable
     {
         try
         {
-            var devices = await _controller.GetCaptureDevicesAsync(DeviceState.Active);
+            var devices = await GetCaptureDeviceObjectsAsync();
             var target = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
             if (target == null) return false;
             return await target.SetAsDefaultAsync();
@@ -127,7 +132,7 @@ public class AudioDeviceService : IDisposable
     {
         try
         {
-            var devices = await _controller.GetCaptureDevicesAsync(DeviceState.Active);
+            var devices = await GetCaptureDeviceObjectsAsync();
             var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
             if (device == null) return null;
             return (int)Math.Round(device.Volume);
@@ -159,5 +164,25 @@ public class AudioDeviceService : IDisposable
     {
         (_controller as IDisposable)?.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    private async Task<IEnumerable<dynamic>> GetPlaybackDeviceObjectsAsync()
+    {
+        if (_playbackCache != null && DateTime.UtcNow - _playbackCacheAt < _cacheDuration)
+            return _playbackCache;
+        var devices = await _controller.GetPlaybackDevicesAsync(DeviceState.Active);
+        _playbackCache = devices.ToList();
+        _playbackCacheAt = DateTime.UtcNow;
+        return _playbackCache;
+    }
+
+    private async Task<IEnumerable<dynamic>> GetCaptureDeviceObjectsAsync()
+    {
+        if (_captureCache != null && DateTime.UtcNow - _captureCacheAt < _cacheDuration)
+            return _captureCache;
+        var devices = await _controller.GetCaptureDevicesAsync(DeviceState.Active);
+        _captureCache = devices.ToList();
+        _captureCacheAt = DateTime.UtcNow;
+        return _captureCache;
     }
 }
