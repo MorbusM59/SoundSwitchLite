@@ -411,9 +411,12 @@
                                    Foreground="#C0BFDB" FontSize="12"
                                    VerticalAlignment="Center" Margin="4,0,10,0"/>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <!-- Decrement -->
-                            <Button Content="&#8722;" Style="{StaticResource SmallIconButton}"
+                                <!-- Decrement -->
+                                <Button Content="&#8722;" Style="{StaticResource SmallIconButton}"
                                     Click="VolumeDecrement_Click" Tag="{Binding}"
+                                    PreviewMouseLeftButtonDown="VolumeButton_PreviewMouseDown"
+                                    PreviewMouseLeftButtonUp="VolumeButton_PreviewMouseUp"
+                                    MouseLeave="VolumeButton_MouseLeave"
                                     ToolTip="Decrease base volume"/>
                             <!-- Editable value -->
                             <Border Width="46" Height="24" Background="#2A2A3E"
@@ -427,9 +430,12 @@
                                          PreviewTextInput="NumberOnly_PreviewTextInput"
                                          DataObject.Pasting="NumberOnly_Pasting"/>
                             </Border>
-                            <!-- Increment -->
-                            <Button Content="+" Style="{StaticResource SmallIconButton}"
+                                <!-- Increment -->
+                                <Button Content="+" Style="{StaticResource SmallIconButton}"
                                     Click="VolumeIncrement_Click" Tag="{Binding}"
+                                    PreviewMouseLeftButtonDown="VolumeButton_PreviewMouseDown"
+                                    PreviewMouseLeftButtonUp="VolumeButton_PreviewMouseUp"
+                                    MouseLeave="VolumeButton_MouseLeave"
                                     ToolTip="Increase base volume"/>
                         </StackPanel>
                     </Grid>

@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using SoundSwitchLite.Models;
 using SoundSwitchLite.Services;
+using System.Windows.Threading;
 
 namespace SoundSwitchLite;
 
@@ -159,6 +160,12 @@ public partial class MainWindow : Window
     private List<AudioDevice> _allInputDevices = new();
     private DeviceSlotViewModel? _listeningSlot;
     private bool _isRefreshingDevices;
+
+    // Volume button repeat support
+    private DispatcherTimer? _volumeRepeatTimer;
+    private DeviceSlotViewModel? _repeatSlot;
+    private bool _repeatIsIncrement;
+    private int _repeatCount;
 
     private static readonly Dictionary<int, string> ModifierNames = new()
     {
@@ -421,7 +428,7 @@ public partial class MainWindow : Window
                 slot.BaseVolume = val; // property setter clamps to 0-100
             else
                 tb.Text = slot.BaseVolume.ToString(); // restore last valid value
-            await ApplyVolumeToActiveSlotAsync(slot);
+            await ApplyVolumeToActiveSlotAsync(slot, force: true);
             SaveSettings();
         }
     }
@@ -445,14 +452,72 @@ public partial class MainWindow : Window
     /// Applies the effective volume (MasterVolume × BaseVolume / 100) to the given slot's
     /// device, but only when that slot is currently the active (default) device.
     /// </summary>
-    private async Task ApplyVolumeToActiveSlotAsync(DeviceSlotViewModel slot)
+    private async Task ApplyVolumeToActiveSlotAsync(DeviceSlotViewModel slot, bool force = false)
     {
-        if (!slot.IsActive || slot.SelectedDevice == null) return;
+        if (!force && !slot.IsActive) return;
+        if (slot.SelectedDevice == null) return;
         int effectiveVolume = (int)Math.Round(_viewModel.MasterVolume / 100.0 * slot.BaseVolume);
         if (slot.IsInput)
             await _audioService.SetCaptureVolumeAsync(slot.SelectedDevice.Id, effectiveVolume);
         else
             await _audioService.SetVolumeAsync(slot.SelectedDevice.Id, effectiveVolume);
+    }
+
+    // --- Volume button press-and-hold with acceleration ---
+    private void VolumeButton_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is DeviceSlotViewModel slot)
+        {
+            _repeatSlot = slot;
+            _repeatIsIncrement = (btn.Content?.ToString() == "+");
+            _repeatCount = 0;
+
+            // Start timer with initial delay 250ms
+            _volumeRepeatTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+            _volumeRepeatTimer.Tick += VolumeRepeatTimer_Tick;
+            _volumeRepeatTimer.Start();
+        }
+    }
+
+    private void VolumeButton_PreviewMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        StopVolumeRepeat();
+    }
+
+    private void VolumeButton_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        StopVolumeRepeat();
+    }
+
+    private async void VolumeRepeatTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_repeatSlot == null || _volumeRepeatTimer == null) return;
+
+        // Perform single increment/decrement
+        if (_repeatIsIncrement)
+            _repeatSlot.BaseVolume++;
+        else
+            _repeatSlot.BaseVolume--;
+
+        await ApplyVolumeToActiveSlotAsync(_repeatSlot, force: true);
+        SaveSettings();
+
+        // Increase repeat count and set next interval using 1/(4+n) seconds, lower bound 1/20s
+        _repeatCount++;
+        double nextInterval = Math.Max(1.0 / 20.0, 1.0 / (4 + _repeatCount));
+        _volumeRepeatTimer.Interval = TimeSpan.FromSeconds(nextInterval);
+    }
+
+    private void StopVolumeRepeat()
+    {
+        if (_volumeRepeatTimer != null)
+        {
+            _volumeRepeatTimer.Stop();
+            _volumeRepeatTimer.Tick -= VolumeRepeatTimer_Tick;
+            _volumeRepeatTimer = null;
+        }
+        _repeatSlot = null;
+        _repeatCount = 0;
     }
 
     // ── Hotkey handling ───────────────────────────────────────────────────────
