@@ -374,20 +374,22 @@ public partial class MainWindow : Window
 
     // ── Base volume controls ─────────────────────────────────────────────────
 
-    private void VolumeDecrement_Click(object sender, RoutedEventArgs e)
+    private async void VolumeDecrement_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot)
         {
             slot.BaseVolume--;
+            await ApplyVolumeToActiveSlotAsync(slot);
             SaveSettings();
         }
     }
 
-    private void VolumeIncrement_Click(object sender, RoutedEventArgs e)
+    private async void VolumeIncrement_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot)
         {
             slot.BaseVolume++;
+            await ApplyVolumeToActiveSlotAsync(slot);
             SaveSettings();
         }
     }
@@ -410,7 +412,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void BaseVolumeTextBox_LostFocus(object sender, RoutedEventArgs e)
+    private async void BaseVolumeTextBox_LostFocus(object sender, RoutedEventArgs e)
     {
         if (sender is TextBox tb && tb.DataContext is DeviceSlotViewModel slot)
         {
@@ -419,15 +421,38 @@ public partial class MainWindow : Window
                 slot.BaseVolume = val; // property setter clamps to 0-100
             else
                 tb.Text = slot.BaseVolume.ToString(); // restore last valid value
+            await ApplyVolumeToActiveSlotAsync(slot);
             SaveSettings();
         }
     }
 
     // ── Master volume ─────────────────────────────────────────────────────────
 
-    private void MasterVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private async void MasterVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        await ApplyMasterVolumeAsync();
         SaveSettings();
+    }
+
+    /// <summary>Applies the current effective volume to all currently active slots.</summary>
+    private async Task ApplyMasterVolumeAsync()
+    {
+        foreach (var slot in _viewModel.OutputSlots.Concat(_viewModel.InputSlots))
+            await ApplyVolumeToActiveSlotAsync(slot);
+    }
+
+    /// <summary>
+    /// Applies the effective volume (MasterVolume × BaseVolume / 100) to the given slot's
+    /// device, but only when that slot is currently the active (default) device.
+    /// </summary>
+    private async Task ApplyVolumeToActiveSlotAsync(DeviceSlotViewModel slot)
+    {
+        if (!slot.IsActive || slot.SelectedDevice == null) return;
+        int effectiveVolume = (int)Math.Round(_viewModel.MasterVolume / 100.0 * slot.BaseVolume);
+        if (slot.IsInput)
+            await _audioService.SetCaptureVolumeAsync(slot.SelectedDevice.Id, effectiveVolume);
+        else
+            await _audioService.SetVolumeAsync(slot.SelectedDevice.Id, effectiveVolume);
     }
 
     // ── Hotkey handling ───────────────────────────────────────────────────────
