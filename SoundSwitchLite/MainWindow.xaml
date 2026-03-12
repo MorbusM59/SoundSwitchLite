@@ -28,6 +28,9 @@
         <converters:BoolToBrushConverter x:Key="TabActiveFgBrush"
             TrueBrush="#FFFFFF" FalseBrush="#888899"/>
         <converters:CountToVisibilityConverter x:Key="CountToVisibility"/>
+        <converters:BoolToStringConverter x:Key="ActiveRemoveTooltip"
+            TrueString="Cannot remove the active device — switch to another device first"
+            FalseString="Remove this slot"/>
 
         <!-- Dark ComboBox item -->
         <Style x:Key="DarkComboBoxItem" TargetType="ComboBoxItem">
@@ -343,10 +346,11 @@
                                        TextTrimming="CharacterEllipsis"/>
                         </Border>
 
-                        <!-- Remove button -->
+                        <!-- Remove button (disabled when device is currently active) -->
                         <Button Grid.Column="3" Width="26" Height="26" Margin="6,0,0,0"
                                 Click="RemoveSlot_Click" Tag="{Binding}"
-                                Cursor="Hand" ToolTip="Remove this slot">
+                                Cursor="Hand"
+                                ToolTip="{Binding IsActive, Converter={StaticResource ActiveRemoveTooltip}}">
                             <Button.Style>
                                 <Style TargetType="Button">
                                     <Setter Property="Background" Value="Transparent"/>
@@ -364,10 +368,18 @@
                                                         <Setter Property="Background" Value="#3D2A3A"/>
                                                         <Setter Property="Foreground" Value="#FF6680"/>
                                                     </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter Property="Opacity" Value="0.3"/>
+                                                    </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
                                         </Setter.Value>
                                     </Setter>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
                                 </Style>
                             </Button.Style>
                         </Button>
