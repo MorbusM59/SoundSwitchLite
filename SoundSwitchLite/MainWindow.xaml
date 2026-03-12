@@ -343,14 +343,32 @@
                                        TextTrimming="CharacterEllipsis"/>
                         </Border>
 
-                        <!-- Remove button -->
+                        <!-- Remove button (disabled when this slot is the active device) -->
                         <Button Grid.Column="3" Width="26" Height="26" Margin="6,0,0,0"
                                 Click="RemoveSlot_Click" Tag="{Binding}"
-                                Cursor="Hand" ToolTip="Remove this slot">
+                                Cursor="Hand">
+                            <Button.ToolTip>
+                                <ToolTip>
+                                    <TextBlock>
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="Remove this slot"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                        <Setter Property="Text" Value="Cannot remove the active device"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </ToolTip>
+                            </Button.ToolTip>
                             <Button.Style>
                                 <Style TargetType="Button">
                                     <Setter Property="Background" Value="Transparent"/>
                                     <Setter Property="Foreground" Value="#666680"/>
+                                    <Setter Property="Opacity" Value="1"/>
+                                    <Setter Property="Cursor" Value="Hand"/>
                                     <Setter Property="Template">
                                         <Setter.Value>
                                             <ControlTemplate TargetType="Button">
@@ -364,10 +382,20 @@
                                                         <Setter Property="Background" Value="#3D2A3A"/>
                                                         <Setter Property="Foreground" Value="#FF6680"/>
                                                     </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter Property="Foreground" Value="#3A3A50"/>
+                                                    </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
                                         </Setter.Value>
                                     </Setter>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False"/>
+                                            <Setter Property="Opacity" Value="0.35"/>
+                                            <Setter Property="Cursor" Value="Arrow"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
                                 </Style>
                             </Button.Style>
                         </Button>
