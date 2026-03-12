@@ -569,6 +569,9 @@ public partial class MainWindow : Window
     {
         if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot)
         {
+            // Do not allow removing the currently active device to avoid volume state mismatches.
+            if (slot.IsActive) return;
+
             if (slot.HotkeyId >= 0) _hotkeyService.UnregisterHotkey(slot.HotkeyId);
             if (_listeningSlot == slot) _listeningSlot = null;
 
