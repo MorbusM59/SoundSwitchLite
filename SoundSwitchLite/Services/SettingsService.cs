@@ -20,20 +20,27 @@ public class AppSettings
 
 public class SettingsService
 {
-    private static readonly string SettingsPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "SoundSwitchLite",
-        "settings.json");
+    private readonly string _settingsPath;
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+
+    public SettingsService() : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "settings.json"))
+    {
+    }
+
+    // Constructor used for testing to specify an alternate settings file path
+    public SettingsService(string settingsPath)
+    {
+        _settingsPath = settingsPath;
+    }
 
     public AppSettings Load()
     {
         try
         {
-            if (File.Exists(SettingsPath))
+            if (File.Exists(_settingsPath))
             {
-                var json = File.ReadAllText(SettingsPath);
+                var json = File.ReadAllText(_settingsPath);
                 return JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
             }
         }
@@ -44,18 +51,26 @@ public class SettingsService
         return new AppSettings();
     }
 
-    public void Save(AppSettings settings)
+    public bool Save(AppSettings settings)
     {
         try
         {
-            var dir = Path.GetDirectoryName(SettingsPath)!;
+            var dir = Path.GetDirectoryName(_settingsPath)!;
             Directory.CreateDirectory(dir);
             var json = JsonSerializer.Serialize(settings, JsonOptions);
-            File.WriteAllText(SettingsPath, json);
+            File.WriteAllText(_settingsPath, json);
+            return true;
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore save failures silently
+            try
+            {
+                var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite");
+                Directory.CreateDirectory(logDir);
+                File.AppendAllText(Path.Combine(logDir, "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n");
+            }
+            catch { }
+            return false;
         }
     }
 }
