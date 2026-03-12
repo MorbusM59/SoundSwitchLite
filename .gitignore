@@ -9,3 +9,7 @@ obj/
 ## OS generated
 .DS_Store
 Thumbs.db
+
+## Installer build artifacts
+installer/publish/
+installer/Output/
