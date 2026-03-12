@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.IO;
 using SoundSwitchLite.Models;
 using SoundSwitchLite.Services;
 using System.Windows.Threading;
@@ -148,6 +149,22 @@ public class MainWindowViewModel : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+    // Info panel state
+    private bool _infoPanelVisible;
+    private string _infoText = string.Empty;
+
+    public bool InfoPanelVisible
+    {
+        get => _infoPanelVisible;
+        set { _infoPanelVisible = value; OnPropertyChanged(); }
+    }
+
+    public string InfoText
+    {
+        get => _infoText;
+        set { _infoText = value; OnPropertyChanged(); }
+    }
 }
 
 public partial class MainWindow : Window
@@ -183,61 +200,84 @@ public partial class MainWindow : Window
 
         Loaded += OnLoaded;
         Closing += OnWindowClosing;
+        // Hide info panel when clicking anywhere outside
+        MouseDown += (s, e) => { _viewModel.InfoPanelVisible = false; };
+    }
+
+    private void InfoButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (sender is FrameworkElement fe)
+            {
+                var text = fe.Tag as string ?? "";
+                _viewModel.InfoText = text;
+                _viewModel.InfoPanelVisible = true;
+            }
+        }
+        catch { }
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        _hotkeyService.Initialize(this);
-
-        _allOutputDevices = (await _audioService.GetPlaybackDevicesAsync()).ToList();
-        _allInputDevices = (await _audioService.GetCaptureDevicesAsync()).ToList();
-
-        var settings = _settingsService.Load();
-        _viewModel.MasterVolume = settings.MasterVolume;
-
-        // Restore unused device pools
-        foreach (var id in settings.UnusedOutputDeviceIds)
+        try
         {
-            var d = _allOutputDevices.FirstOrDefault(x => x.Id == id);
-            if (d != null) _viewModel.UnusedOutputDevices.Add(d);
-        }
-        foreach (var id in settings.UnusedInputDeviceIds)
-        {
-            var d = _allInputDevices.FirstOrDefault(x => x.Id == id);
-            if (d != null) _viewModel.UnusedInputDevices.Add(d);
-        }
-        _viewModel.NotifyUnusedChanged();
+            _hotkeyService.Initialize(this);
 
-        // Restore output slots
-        if (settings.DeviceMappings.Count > 0)
-        {
-            foreach (var mapping in settings.DeviceMappings)
+            _allOutputDevices = (await _audioService.GetPlaybackDevicesAsync()).ToList();
+            _allInputDevices = (await _audioService.GetCaptureDevicesAsync()).ToList();
+
+            var settings = _settingsService.Load();
+            _viewModel.MasterVolume = settings.MasterVolume;
+
+            // Restore unused device pools
+            foreach (var id in settings.UnusedOutputDeviceIds)
             {
-                var slot = CreateSlot(isInput: false);
-                _viewModel.OutputSlots.Add(slot);
-                RestoreMappingToSlot(slot, mapping, _allOutputDevices);
+                var d = _allOutputDevices.FirstOrDefault(x => x.Id == id);
+                if (d != null) _viewModel.UnusedOutputDevices.Add(d);
             }
+            foreach (var id in settings.UnusedInputDeviceIds)
+            {
+                var d = _allInputDevices.FirstOrDefault(x => x.Id == id);
+                if (d != null) _viewModel.UnusedInputDevices.Add(d);
+            }
+            _viewModel.NotifyUnusedChanged();
+
+            // Restore output slots
+            if (settings.DeviceMappings.Count > 0)
+            {
+                foreach (var mapping in settings.DeviceMappings)
+                {
+                    var slot = CreateSlot(isInput: false);
+                    _viewModel.OutputSlots.Add(slot);
+                    RestoreMappingToSlot(slot, mapping, _allOutputDevices);
+                }
+            }
+            else
+            {
+                _viewModel.OutputSlots.Add(CreateSlot(isInput: false));
+            }
+
+            // Restore input slots
+            foreach (var mapping in settings.InputDeviceMappings)
+            {
+                var slot = CreateSlot(isInput: true);
+                _viewModel.InputSlots.Add(slot);
+                RestoreMappingToSlot(slot, mapping, _allInputDevices);
+            }
+
+            // Refresh all dropdowns now that all slots are loaded
+            RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
+            RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
+
+            await RefreshActiveDevice();
+            UpdateOutputAddButtonVisibility();
+            UpdateInputAddButtonVisibility();
         }
-        else
+        catch (Exception ex)
         {
-            _viewModel.OutputSlots.Add(CreateSlot(isInput: false));
+            try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { }
         }
-
-        // Restore input slots
-        foreach (var mapping in settings.InputDeviceMappings)
-        {
-            var slot = CreateSlot(isInput: true);
-            _viewModel.InputSlots.Add(slot);
-            RestoreMappingToSlot(slot, mapping, _allInputDevices);
-        }
-
-        // Refresh all dropdowns now that all slots are loaded
-        RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
-        RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
-
-        await RefreshActiveDevice();
-        UpdateOutputAddButtonVisibility();
-        UpdateInputAddButtonVisibility();
     }
 
     private void RestoreMappingToSlot(DeviceSlotViewModel slot, DeviceMapping mapping, List<AudioDevice> allDevices)
@@ -331,8 +371,15 @@ public partial class MainWindow : Window
 
     private async void PlayButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot && slot.SelectedDevice != null)
-            await ActivateSlotDeviceAsync(slot);
+        try
+        {
+            if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot && slot.SelectedDevice != null)
+                await ActivateSlotDeviceAsync(slot);
+        }
+        catch (Exception ex)
+        {
+            try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { }
+        }
     }
 
     private async Task ActivateSlotDeviceAsync(DeviceSlotViewModel slot)
@@ -383,21 +430,35 @@ public partial class MainWindow : Window
 
     private async void VolumeDecrement_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot)
+        try
         {
-            slot.BaseVolume--;
-            await ApplyVolumeToActiveSlotAsync(slot);
-            SaveSettings();
+            if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot)
+            {
+                slot.BaseVolume--;
+                await ApplyVolumeToActiveSlotAsync(slot);
+                SaveSettings();
+            }
+        }
+        catch (Exception ex)
+        {
+            try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { }
         }
     }
 
     private async void VolumeIncrement_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot)
+        try
         {
-            slot.BaseVolume++;
-            await ApplyVolumeToActiveSlotAsync(slot);
-            SaveSettings();
+            if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot)
+            {
+                slot.BaseVolume++;
+                await ApplyVolumeToActiveSlotAsync(slot);
+                SaveSettings();
+            }
+        }
+        catch (Exception ex)
+        {
+            try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { }
         }
     }
 
@@ -421,15 +482,22 @@ public partial class MainWindow : Window
 
     private async void BaseVolumeTextBox_LostFocus(object sender, RoutedEventArgs e)
     {
-        if (sender is TextBox tb && tb.DataContext is DeviceSlotViewModel slot)
+        try
         {
-            // Parse and clamp; reset display if the field is empty or non-numeric.
-            if (int.TryParse(tb.Text, out int val))
-                slot.BaseVolume = val; // property setter clamps to 0-100
-            else
-                tb.Text = slot.BaseVolume.ToString(); // restore last valid value
-            await ApplyVolumeToActiveSlotAsync(slot, force: true);
-            SaveSettings();
+            if (sender is TextBox tb && tb.DataContext is DeviceSlotViewModel slot)
+            {
+                // Parse and clamp; reset display if the field is empty or non-numeric.
+                if (int.TryParse(tb.Text, out int val))
+                    slot.BaseVolume = val; // property setter clamps to 0-100
+                else
+                    tb.Text = slot.BaseVolume.ToString(); // restore last valid value
+                await ApplyVolumeToActiveSlotAsync(slot, force: true);
+                SaveSettings();
+            }
+        }
+        catch (Exception ex)
+        {
+            try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { }
         }
     }
 
@@ -437,8 +505,15 @@ public partial class MainWindow : Window
 
     private async void MasterVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        await ApplyMasterVolumeAsync();
-        SaveSettings();
+        try
+        {
+            await ApplyMasterVolumeAsync();
+            SaveSettings();
+        }
+        catch (Exception ex)
+        {
+            try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { }
+        }
     }
 
     /// <summary>Applies the current effective volume to all currently active slots.</summary>
@@ -491,21 +566,28 @@ public partial class MainWindow : Window
 
     private async void VolumeRepeatTimer_Tick(object? sender, EventArgs e)
     {
-        if (_repeatSlot == null || _volumeRepeatTimer == null) return;
+        try
+        {
+            if (_repeatSlot == null || _volumeRepeatTimer == null) return;
 
-        // Perform single increment/decrement
-        if (_repeatIsIncrement)
-            _repeatSlot.BaseVolume++;
-        else
-            _repeatSlot.BaseVolume--;
+            // Perform single increment/decrement
+            if (_repeatIsIncrement)
+                _repeatSlot.BaseVolume++;
+            else
+                _repeatSlot.BaseVolume--;
 
-        await ApplyVolumeToActiveSlotAsync(_repeatSlot, force: true);
-        SaveSettings();
+            await ApplyVolumeToActiveSlotAsync(_repeatSlot, force: true);
+            SaveSettings();
 
-        // Increase repeat count and set next interval using 1/(4+n) seconds, lower bound 1/20s
-        _repeatCount++;
-        double nextInterval = Math.Max(1.0 / 20.0, 1.0 / (4 + _repeatCount));
-        _volumeRepeatTimer.Interval = TimeSpan.FromSeconds(nextInterval);
+            // Increase repeat count and set next interval using 1/(4+n) seconds, lower bound 1/20s
+            _repeatCount++;
+            double nextInterval = Math.Max(1.0 / 20.0, 1.0 / (4 + _repeatCount));
+            _volumeRepeatTimer.Interval = TimeSpan.FromSeconds(nextInterval);
+        }
+        catch (Exception ex)
+        {
+            try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { }
+        }
     }
 
     private void StopVolumeRepeat()

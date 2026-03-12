@@ -11,7 +11,7 @@ public class AudioDevice
 
 public class AudioDeviceService : IDisposable
 {
-    private readonly CoreAudioController _controller;
+    private readonly CoreAudioController? _controller;
     private IEnumerable<dynamic>? _playbackCache;
     private DateTime _playbackCacheAt = DateTime.MinValue;
     private IEnumerable<dynamic>? _captureCache;
@@ -20,7 +20,14 @@ public class AudioDeviceService : IDisposable
 
     public AudioDeviceService()
     {
-        _controller = new CoreAudioController();
+        try
+        {
+            _controller = new CoreAudioController();
+        }
+        catch
+        {
+            _controller = null;
+        }
     }
 
     public async Task<IEnumerable<AudioDevice>> GetPlaybackDevicesAsync()
@@ -31,6 +38,7 @@ public class AudioDeviceService : IDisposable
 
     public async Task<string?> GetDefaultDeviceIdAsync()
     {
+        if (_controller == null) return null;
         var device = await _controller.GetDefaultDeviceAsync(DeviceType.Playback, Role.Multimedia);
         return device?.Id.ToString();
     }
@@ -107,6 +115,7 @@ public class AudioDeviceService : IDisposable
     /// <summary>Returns the ID of the current default capture device, or null.</summary>
     public async Task<string?> GetDefaultCaptureDeviceIdAsync()
     {
+        if (_controller == null) return null;
         var device = await _controller.GetDefaultDeviceAsync(DeviceType.Capture, Role.Multimedia);
         return device?.Id.ToString();
     }
@@ -148,6 +157,7 @@ public class AudioDeviceService : IDisposable
     {
         try
         {
+            if (_controller == null) return false;
             var devices = await _controller.GetCaptureDevicesAsync(DeviceState.Active);
             var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
             if (device == null) return false;
@@ -170,6 +180,7 @@ public class AudioDeviceService : IDisposable
     {
         if (_playbackCache != null && DateTime.UtcNow - _playbackCacheAt < _cacheDuration)
             return _playbackCache;
+        if (_controller == null) return Enumerable.Empty<dynamic>();
         var devices = await _controller.GetPlaybackDevicesAsync(DeviceState.Active);
         _playbackCache = devices.ToList();
         _playbackCacheAt = DateTime.UtcNow;
@@ -180,6 +191,7 @@ public class AudioDeviceService : IDisposable
     {
         if (_captureCache != null && DateTime.UtcNow - _captureCacheAt < _cacheDuration)
             return _captureCache;
+        if (_controller == null) return Enumerable.Empty<dynamic>();
         var devices = await _controller.GetCaptureDevicesAsync(DeviceState.Active);
         _captureCache = devices.ToList();
         _captureCacheAt = DateTime.UtcNow;

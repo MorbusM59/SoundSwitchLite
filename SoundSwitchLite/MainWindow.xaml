@@ -88,6 +88,7 @@
                                                 <TextBlock Grid.Column="1" Text="&#9662;" Foreground="#999BB5"
                                                            VerticalAlignment="Center" HorizontalAlignment="Center"/>
                                             </Grid>
+                                            
                                         </Border>
                                     </ControlTemplate>
                                 </ToggleButton.Template>
@@ -170,6 +171,31 @@
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="#4A4870"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Small info icon button -->
+        <Style x:Key="InfoIconButton" TargetType="Button">
+            <Setter Property="Width" Value="22"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="Foreground" Value="#C0BFDB"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="6" Width="22" Height="22">
+                            <TextBlock Text="i" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#2A2A3E"/>
+                                <Setter Property="Foreground" Value="#6C63FF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -276,6 +302,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="148"/>
                             <ColumnDefinition Width="34"/>
+                            <ColumnDefinition Width="26"/>
                         </Grid.ColumnDefinitions>
 
                         <!-- Play/activate button -->
@@ -345,8 +372,8 @@
 
                         <!-- Remove button (disabled when this slot is the active device) -->
                         <Button Grid.Column="3" Width="26" Height="26" Margin="6,0,0,0"
-                                Click="RemoveSlot_Click" Tag="{Binding}"
-                                Cursor="Hand">
+                            Click="RemoveSlot_Click" Tag="{Binding}"
+                            Cursor="Hand">
                             <Button.ToolTip>
                                 <ToolTip>
                                     <TextBlock>
@@ -399,6 +426,9 @@
                                 </Style>
                             </Button.Style>
                         </Button>
+                        <!-- Info icon for the slot -->
+                        <Button Grid.Column="4" Style="{StaticResource InfoIconButton}" Margin="6,0,0,0"
+                            Click="InfoButton_Click" Tag="Select a device for this slot. Click to see more details."/>
                     </Grid>
 
                     <!-- Base volume row -->
@@ -450,6 +480,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="44"/>   <!-- title bar -->
                 <RowDefinition Height="*"/>    <!-- tab content -->
+                <RowDefinition Height="Auto"/> <!-- info panel -->
                 <RowDefinition Height="46"/>   <!-- tab bar -->
             </Grid.RowDefinitions>
 
@@ -536,19 +567,20 @@
 
                 <!-- Footer buttons -->
                 <Border Grid.Row="2" Padding="14,6,14,10">
-                    <StackPanel
-                        Visibility="{Binding CanAddOutputDevice, Converter={StaticResource BoolToVisibility}}">
-                        <Button Content="+ Add Device"
-                                Style="{StaticResource PrimaryButton}"
-                                Padding="24,0"
-                                HorizontalAlignment="Center"
-                                Click="AddOutputDevice_Click"/>
-                        <Button Content="Send other devices to unused"
-                                Style="{StaticResource SecondaryButton}"
-                                Padding="20,0"
-                                HorizontalAlignment="Center"
-                                Margin="0,6,0,0"
-                                Click="SendOutputToUnused_Click"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                                Visibility="{Binding CanAddOutputDevice, Converter={StaticResource BoolToVisibility}}">
+                    <Button Content="+ Add Device"
+                        Style="{StaticResource PrimaryButton}"
+                        Padding="18,0"
+                        Click="AddOutputDevice_Click"/>
+                        <Button Style="{StaticResource InfoIconButton}" Click="InfoButton_Click" Tag="Add a new output slot. Click for more info." Margin="6,0,0,0"/>
+
+                    <Button Content="Send other devices to unused"
+                        Style="{StaticResource SecondaryButton}"
+                        Padding="14,0"
+                        Margin="8,0,0,0"
+                        Click="SendOutputToUnused_Click"/>
+                        <Button Style="{StaticResource InfoIconButton}" Click="InfoButton_Click" Tag="Moves unused output devices into the Unused list." Margin="6,0,0,0"/>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -697,7 +729,7 @@
             </Grid>
 
             <!-- ── Tab bar ───────────────────────────────────────── -->
-            <Border Grid.Row="2" Background="#16162A" CornerRadius="0,0,12,12"
+                <Border Grid.Row="3" Background="#16162A" CornerRadius="0,0,12,12"
                     BorderBrush="#2D2D40" BorderThickness="0,1,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
