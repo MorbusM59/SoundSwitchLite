@@ -92,6 +92,69 @@ public class AudioDeviceService : IDisposable
         }
     }
 
+    /// <summary>Returns all active capture (microphone/input) devices.</summary>
+    public async Task<IEnumerable<AudioDevice>> GetCaptureDevicesAsync()
+    {
+        var devices = await _controller.GetCaptureDevicesAsync(DeviceState.Active);
+        return devices.Select(d => new AudioDevice { Id = d.Id.ToString(), Name = d.FullName });
+    }
+
+    /// <summary>Returns the ID of the current default capture device, or null.</summary>
+    public async Task<string?> GetDefaultCaptureDeviceIdAsync()
+    {
+        var device = await _controller.GetDefaultDeviceAsync(DeviceType.Capture, Role.Multimedia);
+        return device?.Id.ToString();
+    }
+
+    /// <summary>Sets the specified capture device as the default. Returns true on success.</summary>
+    public async Task<bool> SetDefaultCaptureDeviceAsync(string deviceId)
+    {
+        try
+        {
+            var devices = await _controller.GetCaptureDevicesAsync(DeviceState.Active);
+            var target = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
+            if (target == null) return false;
+            return await target.SetAsDefaultAsync();
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Returns the current volume (0–100) for the given capture device, or null on failure.</summary>
+    public async Task<int?> GetCaptureVolumeAsync(string deviceId)
+    {
+        try
+        {
+            var devices = await _controller.GetCaptureDevicesAsync(DeviceState.Active);
+            var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
+            if (device == null) return null;
+            return (int)Math.Round(device.Volume);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Sets the volume (0–100) for the given capture device. Returns true on success.</summary>
+    public async Task<bool> SetCaptureVolumeAsync(string deviceId, int volume)
+    {
+        try
+        {
+            var devices = await _controller.GetCaptureDevicesAsync(DeviceState.Active);
+            var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
+            if (device == null) return false;
+            await device.SetVolumeAsync(Math.Clamp(volume, 0, 100));
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public void Dispose()
     {
         (_controller as IDisposable)?.Dispose();

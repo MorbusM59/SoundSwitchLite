@@ -6,7 +6,16 @@ namespace SoundSwitchLite.Services;
 
 public class AppSettings
 {
+    /// <summary>Output (playback) device slots.</summary>
     public List<DeviceMapping> DeviceMappings { get; set; } = new();
+    /// <summary>Input (capture) device slots.</summary>
+    public List<DeviceMapping> InputDeviceMappings { get; set; } = new();
+    /// <summary>Device IDs that have been sent to the "unused" pool for output devices.</summary>
+    public List<string> UnusedOutputDeviceIds { get; set; } = new();
+    /// <summary>Device IDs that have been sent to the "unused" pool for input devices.</summary>
+    public List<string> UnusedInputDeviceIds { get; set; } = new();
+    /// <summary>Master volume percentage (0–100). Defaults to 100.</summary>
+    public int MasterVolume { get; set; } = 100;
 }
 
 public class SettingsService
