@@ -629,21 +629,22 @@
                                   ItemTemplate="{StaticResource DeviceSlotTemplate}"/>
                 </ScrollViewer>
 
-                <!-- Footer buttons -->
+                <!-- Footer buttons (compact) -->
                 <Border Grid.Row="2" Padding="14,6,14,10">
-                    <StackPanel
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
                         Visibility="{Binding CanAddInputDevice, Converter={StaticResource BoolToVisibility}}">
-                        <Button Content="+ Add Device"
-                                Style="{StaticResource PrimaryButton}"
-                                Padding="24,0"
-                                HorizontalAlignment="Center"
-                                Click="AddInputDevice_Click"/>
-                        <Button Content="Send other devices to unused"
-                                Style="{StaticResource SecondaryButton}"
-                                Padding="20,0"
-                                HorizontalAlignment="Center"
-                                Margin="0,6,0,0"
-                                Click="SendInputToUnused_Click"/>
+                    <Button Content="+ Add Device"
+                        Style="{StaticResource PrimaryButton}"
+                        Padding="18,0"
+                        Click="AddInputDevice_Click"/>
+                    <Button Style="{StaticResource InfoIconButton}" Click="InfoButton_Click" Tag="Add a new input slot. Click for more info." Margin="6,0,0,0"/>
+
+                    <Button Content="Send other devices to unused"
+                        Style="{StaticResource SecondaryButton}"
+                        Padding="14,0"
+                        Margin="8,0,0,0"
+                        Click="SendInputToUnused_Click"/>
+                    <Button Style="{StaticResource InfoIconButton}" Click="InfoButton_Click" Tag="Moves unused input devices into the Unused list." Margin="6,0,0,0"/>
                     </StackPanel>
                 </Border>
             </Grid>
