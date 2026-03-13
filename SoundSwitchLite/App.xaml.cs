@@ -50,10 +50,11 @@ public partial class App : Application
 
         _trayIcon.ContextMenu = contextMenu;
 
-        // Create and show the main window
+        // Create the main window. If started with --minimized, keep it hidden (tray only).
         var mainWindow = new MainWindow();
         MainWindow = mainWindow;
-        mainWindow.Show();
+        if (!e.Args.Contains("--minimized"))
+            mainWindow.Show();
     }
 
     private void ShowMainWindow()

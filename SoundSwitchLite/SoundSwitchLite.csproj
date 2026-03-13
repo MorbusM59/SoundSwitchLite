@@ -10,12 +10,20 @@
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AssemblyName>SoundSwitchLite</AssemblyName>
     <RootNamespace>SoundSwitchLite</RootNamespace>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Company>SoundSwitch Lite</Company>
+    <Product>SoundSwitch Lite</Product>
+    <Description>SoundSwitch Lite – lightweight audio device switcher</Description>
+    <Copyright>Copyright © 2025</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="AudioSwitcher.AudioApi" Version="4.0.0-alpha5" />
     <PackageReference Include="AudioSwitcher.AudioApi.CoreAudio" Version="4.0.0-alpha5" />
     <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="1.1.0" />
+  <PackageReference Include="FontAwesome.Sharp" Version="6.4.0" />
   </ItemGroup>
 
   <ItemGroup>
