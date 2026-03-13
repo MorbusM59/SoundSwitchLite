@@ -394,7 +394,7 @@
                             <TextBox Text="{Binding BaseVolume, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                      Background="Transparent" Foreground="#E0E0F0"
                                      BorderThickness="0" TextAlignment="Center"
-                                     VerticalAlignment="Center" FontSize="12" Height="34"
+                                     VerticalAlignment="Center" VerticalContentAlignment="Center" FontSize="12"
                                      LostFocus="BaseVolumeTextBox_LostFocus"
                                      PreviewTextInput="NumberOnly_PreviewTextInput"
                                      DataObject.Pasting="NumberOnly_Pasting"
