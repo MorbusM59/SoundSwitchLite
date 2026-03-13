@@ -70,7 +70,7 @@ Name: "{autodesktop}\{#MyAppName}";     Filename: "{app}\{#MyAppExeName}"; Tasks
 ; Optional auto-start on Windows login (only when the user checked the task above)
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
   ValueType: string; ValueName: "{#MyAppName}"; \
-  ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue; Tasks: startupentry
+  ValueData: """{app}\{#MyAppExeName}""" --minimized; Flags: uninsdeletevalue; Tasks: startupentry
 
 [Run]
 ; Offer to launch the app after installation finishes
