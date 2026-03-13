@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:SoundSwitchLite"
         xmlns:converters="clr-namespace:SoundSwitchLite.Converters"
+        xmlns:fa="clr-namespace:FontAwesome.Sharp;assembly=FontAwesome.Sharp"
         Title="SoundSwitch Lite"
         MinWidth="520" MinHeight="260"
         Width="600" SizeToContent="Height" MaxHeight="600"
@@ -318,10 +319,8 @@
                                         <Setter.Value>
                                             <ControlTemplate TargetType="Button">
                                                 <Border Background="{TemplateBinding Background}" CornerRadius="17" Width="34" Height="34">
-                                                    <TextBlock Text="&#9654;"
-                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                               Foreground="{Binding IsActive, Converter={StaticResource ActiveForegroundBrush}}"
-                                                               FontSize="12" Margin="2,0,0,0"/>
+                                                    <fa:IconBlock Icon="Play" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                  Foreground="{Binding IsActive, Converter={StaticResource ActiveForegroundBrush}}" Width="14" Height="14" />
                                                 </Border>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
@@ -428,7 +427,9 @@
                         </Button>
                         <!-- Info icon for the slot -->
                         <Button Grid.Column="4" Style="{StaticResource InfoIconButton}" Margin="6,0,0,0"
-                            Click="InfoButton_Click" Tag="Select a device for this slot. Click to see more details."/>
+                                Click="InfoButton_Click" Tag="Select a device for this slot. Click to see more details.">
+                            <fa:IconBlock Icon="InfoCircle" HorizontalAlignment="Center" VerticalAlignment="Center" Width="12" Height="12" Foreground="#C0BFDB" />
+                        </Button>
                     </Grid>
 
                     <!-- Base volume row -->
@@ -491,7 +492,7 @@
                     <TextBlock Text="&#128266;  SoundSwitch Lite"
                                Foreground="#E0E0F0" FontSize="14" FontWeight="SemiBold"
                                VerticalAlignment="Center" Margin="16,0,0,0"/>
-                    <Button x:Name="CloseButton" Content="&#x2715;"
+                    <Button x:Name="CloseButton"
                             Width="32" Height="32" HorizontalAlignment="Right" Margin="0,0,8,0"
                             Foreground="#888899" BorderThickness="0" FontSize="13" Cursor="Hand"
                             Click="CloseButton_Click">
@@ -502,7 +503,7 @@
                                     <Setter.Value>
                                         <ControlTemplate TargetType="Button">
                                             <Border Background="{TemplateBinding Background}" CornerRadius="6" Width="28" Height="28">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <fa:IconBlock Icon="Times" HorizontalAlignment="Center" VerticalAlignment="Center" Width="12" Height="12" Foreground="{TemplateBinding Foreground}" />
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
@@ -681,12 +682,12 @@
                                                 <TextBlock Grid.Column="0" Text="{Binding Name}"
                                                            Foreground="#E0E0F0" FontSize="13"
                                                            VerticalAlignment="Center"/>
-                                                <Button Grid.Column="1" Style="{StaticResource SecondaryButton}"
-                                                        Width="68" Height="26" Padding="6,0"
-                                                        Click="RestoreOutputDevice_ButtonClick"
-                                                        Tag="{Binding}">
-                                                    <TextBlock Text="↺" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#6C63FF"/>
-                                                </Button>
+                                                                        <Button Grid.Column="1" Style="{StaticResource SecondaryButton}"
+                                                                                Width="68" Height="26" Padding="6,0"
+                                                                                Click="RestoreOutputDevice_ButtonClick"
+                                                                                Tag="{Binding}">
+                                                                            <fa:IconBlock Icon="Undo" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#6C63FF" Width="14" Height="14" />
+                                                                        </Button>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -723,7 +724,7 @@
                                                         Width="68" Height="26" Padding="6,0"
                                                         Click="RestoreInputDevice_ButtonClick"
                                                         Tag="{Binding}">
-                                                    <TextBlock Text="↺" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#6C63FF"/>
+                                                    <fa:IconBlock Icon="Undo" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#6C63FF" Width="14" Height="14" />
                                                 </Button>
                                             </Grid>
                                         </Border>
