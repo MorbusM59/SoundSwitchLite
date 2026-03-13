@@ -244,7 +244,12 @@ public partial class MainWindow : Window
         catch { }
     }
 
-    private async void OnLoaded(object sender, RoutedEventArgs e)
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        _ = OnLoadedAsync();
+    }
+
+    private async Task OnLoadedAsync()
     {
         try
         {
@@ -404,7 +409,12 @@ public partial class MainWindow : Window
     }
 
     // Volume controls and helpers omitted for brevity; implement the merged behavior
-    private async void VolumeDecrement_Click(object sender, RoutedEventArgs e)
+    private void VolumeDecrement_Click(object sender, RoutedEventArgs e)
+    {
+        _ = VolumeDecrement_ClickAsync(sender, e);
+    }
+
+    private async Task VolumeDecrement_ClickAsync(object sender, RoutedEventArgs e)
     {
         try
         {
@@ -415,10 +425,18 @@ public partial class MainWindow : Window
                 SaveSettings();
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { }
+        }
     }
 
-    private async void VolumeIncrement_Click(object sender, RoutedEventArgs e)
+    private void VolumeIncrement_Click(object sender, RoutedEventArgs e)
+    {
+        _ = VolumeIncrement_ClickAsync(sender, e);
+    }
+
+    private async Task VolumeIncrement_ClickAsync(object sender, RoutedEventArgs e)
     {
         try
         {
@@ -429,7 +447,10 @@ public partial class MainWindow : Window
                 SaveSettings();
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { }
+        }
     }
 
     private void NumberOnly_PreviewTextInput(object sender, TextCompositionEventArgs e)
@@ -448,26 +469,40 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void BaseVolumeTextBox_LostFocus(object sender, RoutedEventArgs e)
+    private void BaseVolumeTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        _ = BaseVolumeTextBox_LostFocusAsync(sender, e);
+    }
+
+    private async Task BaseVolumeTextBox_LostFocusAsync(object sender, RoutedEventArgs e)
     {
         try
         {
             if (sender is TextBox tb && tb.DataContext is DeviceSlotViewModel slot)
             {
+                // Parse and clamp; reset display if the field is empty or non-numeric.
                 if (int.TryParse(tb.Text, out int val))
-                    slot.BaseVolume = val;
+                    slot.BaseVolume = val; // property setter clamps to 0-100
                 else
-                    tb.Text = slot.BaseVolume.ToString();
+                    tb.Text = slot.BaseVolume.ToString(); // restore last valid value
                 await ApplyVolumeToActiveSlotAsync(slot, force: true);
                 SaveSettings();
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { }
+        }
     }
 
-    private async void MasterVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void MasterVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        try { await ApplyMasterVolumeAsync(); SaveSettings(); } catch { }
+        _ = MasterVolumeSlider_ValueChangedAsync();
+    }
+
+    private async Task MasterVolumeSlider_ValueChangedAsync()
+    {
+        try { await ApplyMasterVolumeAsync(); SaveSettings(); } catch (Exception ex) { try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { } }
     }
 
     private async Task ApplyMasterVolumeAsync()
@@ -504,7 +539,12 @@ public partial class MainWindow : Window
     private void VolumeButton_PreviewMouseUp(object sender, MouseButtonEventArgs e) => StopVolumeRepeat();
     private void VolumeButton_MouseLeave(object sender, MouseEventArgs e) => StopVolumeRepeat();
 
-    private async void VolumeRepeatTimer_Tick(object? sender, EventArgs e)
+    private void VolumeRepeatTimer_Tick(object? sender, EventArgs e)
+    {
+        _ = VolumeRepeatTimer_TickAsync();
+    }
+
+    private async Task VolumeRepeatTimer_TickAsync()
     {
         try
         {
@@ -516,7 +556,10 @@ public partial class MainWindow : Window
             double nextInterval = Math.Max(1.0 / 20.0, 1.0 / (4 + _repeatCount));
             _volumeRepeatTimer.Interval = TimeSpan.FromSeconds(nextInterval);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { }
+        }
     }
 
     private void StopVolumeRepeat()
@@ -674,7 +717,12 @@ public partial class MainWindow : Window
         SaveSettings();
     }
 
-    private async void PlayButton_Click(object sender, RoutedEventArgs e)
+    private void PlayButton_Click(object sender, RoutedEventArgs e)
+    {
+        _ = PlayButton_ClickAsync(sender, e);
+    }
+
+    private async Task PlayButton_ClickAsync(object sender, RoutedEventArgs e)
     {
         try
         {
@@ -683,7 +731,10 @@ public partial class MainWindow : Window
                 await ActivateSlotDeviceAsync(slot);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { }
+        }
     }
 
     private void AddInputDevice_Click(object sender, RoutedEventArgs e)
