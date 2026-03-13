@@ -20,14 +20,8 @@ public class AudioDeviceService : IDisposable
 
     public AudioDeviceService()
     {
-        try
-        {
-            _controller = new CoreAudioController();
-        }
-        catch
-        {
-            _controller = null;
-        }
+        try { _controller = new CoreAudioController(); }
+        catch { _controller = null; }
     }
 
     public async Task<IEnumerable<AudioDevice>> GetPlaybackDevicesAsync()
@@ -52,10 +46,7 @@ public class AudioDeviceService : IDisposable
             if (target == null) return false;
             return await target.SetAsDefaultAsync();
         }
-        catch
-        {
-            return false;
-        }
+        catch { return false; }
     }
 
     public async Task<string?> GetDeviceNameAsync(string deviceId)
@@ -66,13 +57,9 @@ public class AudioDeviceService : IDisposable
             var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
             return device?.FullName;
         }
-        catch
-        {
-            return null;
-        }
+        catch { return null; }
     }
 
-    /// <summary>Returns the current volume (0–100) for the given device, or null on failure.</summary>
     public async Task<int?> GetVolumeAsync(string deviceId)
     {
         try
@@ -82,13 +69,9 @@ public class AudioDeviceService : IDisposable
             if (device == null) return null;
             return (int)Math.Round(device.Volume);
         }
-        catch
-        {
-            return null;
-        }
+        catch { return null; }
     }
 
-    /// <summary>Sets the volume (0–100) for the given device. Returns true on success.</summary>
     public async Task<bool> SetVolumeAsync(string deviceId, int volume)
     {
         try
@@ -99,20 +82,16 @@ public class AudioDeviceService : IDisposable
             await device.SetVolumeAsync(Math.Clamp(volume, 0, 100));
             return true;
         }
-        catch
-        {
-            return false;
-        }
+        catch { return false; }
     }
 
-    /// <summary>Returns all active capture (microphone/input) devices.</summary>
+    // Capture (input) devices
     public async Task<IEnumerable<AudioDevice>> GetCaptureDevicesAsync()
     {
         var devices = await GetCaptureDeviceObjectsAsync();
         return devices.Select(d => new AudioDevice { Id = d.Id.ToString(), Name = d.FullName });
     }
 
-    /// <summary>Returns the ID of the current default capture device, or null.</summary>
     public async Task<string?> GetDefaultCaptureDeviceIdAsync()
     {
         if (_controller == null) return null;
@@ -120,7 +99,6 @@ public class AudioDeviceService : IDisposable
         return device?.Id.ToString();
     }
 
-    /// <summary>Sets the specified capture device as the default. Returns true on success.</summary>
     public async Task<bool> SetDefaultCaptureDeviceAsync(string deviceId)
     {
         try
@@ -130,13 +108,9 @@ public class AudioDeviceService : IDisposable
             if (target == null) return false;
             return await target.SetAsDefaultAsync();
         }
-        catch
-        {
-            return false;
-        }
+        catch { return false; }
     }
 
-    /// <summary>Returns the current volume (0–100) for the given capture device, or null on failure.</summary>
     public async Task<int?> GetCaptureVolumeAsync(string deviceId)
     {
         try
@@ -146,13 +120,9 @@ public class AudioDeviceService : IDisposable
             if (device == null) return null;
             return (int)Math.Round(device.Volume);
         }
-        catch
-        {
-            return null;
-        }
+        catch { return null; }
     }
 
-    /// <summary>Sets the volume (0–100) for the given capture device. Returns true on success.</summary>
     public async Task<bool> SetCaptureVolumeAsync(string deviceId, int volume)
     {
         try
@@ -164,11 +134,10 @@ public class AudioDeviceService : IDisposable
             await device.SetVolumeAsync(Math.Clamp(volume, 0, 100));
             return true;
         }
-        catch
-        {
-            return false;
-        }
+        catch { return false; }
     }
+
+    
 
     public void Dispose()
     {

@@ -682,12 +682,12 @@
                                                 <TextBlock Grid.Column="0" Text="{Binding Name}"
                                                            Foreground="#E0E0F0" FontSize="13"
                                                            VerticalAlignment="Center"/>
-                                                                        <Button Grid.Column="1" Style="{StaticResource SecondaryButton}"
-                                                                                Width="68" Height="26" Padding="6,0"
-                                                                                Click="RestoreOutputDevice_ButtonClick"
-                                                                                Tag="{Binding}">
-                                                                            <fa:IconBlock Icon="Undo" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#6C63FF" Width="14" Height="14" />
-                                                                        </Button>
+                                                <Button Grid.Column="1" Style="{StaticResource SecondaryButton}"
+                                                        Width="68" Height="26" Padding="6,0"
+                                                        Click="RestoreOutputDevice_ButtonClick"
+                                                        Tag="{Binding}">
+                                                    <fa:IconBlock Icon="Undo" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#6C63FF" Width="14" Height="14" />
+                                                </Button>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
