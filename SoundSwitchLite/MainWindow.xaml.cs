@@ -189,6 +189,10 @@ public partial class MainWindow : Window
         { 1, "Alt" }, { 2, "Ctrl" }, { 4, "Shift" }, { 8, "Win" }
     };
 
+    // Info auto-hide timer
+    private DispatcherTimer? _infoAutoHideTimer;
+    private FrameworkElement? _infoSourceElement;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -213,6 +217,36 @@ public partial class MainWindow : Window
                 var text = fe.Tag as string ?? "";
                 _viewModel.InfoText = text;
                 _viewModel.InfoPanelVisible = true;
+                _infoSourceElement = fe;
+                if (_infoAutoHideTimer == null)
+                {
+                    _infoAutoHideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+                    _infoAutoHideTimer.Tick += InfoAutoHideTimer_Tick;
+                }
+                _infoAutoHideTimer.Start();
+            }
+        }
+        catch { }
+    }
+
+    private void InfoAutoHideTimer_Tick(object? sender, EventArgs e)
+    {
+        try
+        {
+            if (_infoSourceElement == null)
+            {
+                _infoAutoHideTimer?.Stop();
+                return;
+            }
+
+            bool overSource = _infoSourceElement.IsMouseOver;
+            bool overPanel = InfoPanelBorder != null && InfoPanelBorder.IsMouseOver;
+
+            if (!overSource && !overPanel)
+            {
+                _viewModel.InfoPanelVisible = false;
+                _infoAutoHideTimer?.Stop();
+                _infoSourceElement = null;
             }
         }
         catch { }
@@ -811,7 +845,31 @@ public partial class MainWindow : Window
         }
     }
 
+    private void RestoreOutputDevice_ButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is AudioDevice device)
+        {
+            _viewModel.UnusedOutputDevices.Remove(device);
+            RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
+            UpdateOutputAddButtonVisibility();
+            _viewModel.NotifyUnusedChanged();
+            SaveSettings();
+        }
+    }
+
     private void RestoreInputDevice_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is AudioDevice device)
+        {
+            _viewModel.UnusedInputDevices.Remove(device);
+            RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
+            UpdateInputAddButtonVisibility();
+            _viewModel.NotifyUnusedChanged();
+            SaveSettings();
+        }
+    }
+
+    private void RestoreInputDevice_ButtonClick(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement fe && fe.Tag is AudioDevice device)
         {

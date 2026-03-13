@@ -680,9 +680,12 @@
                                                 <TextBlock Grid.Column="0" Text="{Binding Name}"
                                                            Foreground="#E0E0F0" FontSize="13"
                                                            VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="1" Text="Restore"
-                                                           Foreground="#6C63FF" FontSize="11"
-                                                           VerticalAlignment="Center"/>
+                                                <Button Grid.Column="1" Style="{StaticResource SecondaryButton}"
+                                                        Width="68" Height="26" Padding="6,0"
+                                                        Click="RestoreOutputDevice_ButtonClick"
+                                                        Tag="{Binding}">
+                                                    <TextBlock Text="↺" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#6C63FF"/>
+                                                </Button>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -715,9 +718,12 @@
                                                 <TextBlock Grid.Column="0" Text="{Binding Name}"
                                                            Foreground="#E0E0F0" FontSize="13"
                                                            VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="1" Text="Restore"
-                                                           Foreground="#6C63FF" FontSize="11"
-                                                           VerticalAlignment="Center"/>
+                                                <Button Grid.Column="1" Style="{StaticResource SecondaryButton}"
+                                                        Width="68" Height="26" Padding="6,0"
+                                                        Click="RestoreInputDevice_ButtonClick"
+                                                        Tag="{Binding}">
+                                                    <TextBlock Text="↺" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#6C63FF"/>
+                                                </Button>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -727,6 +733,19 @@
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
+
+            <!-- ── Tab bar ───────────────────────────────────────── -->
+            <!-- Bottom info panel (collapsible) -->
+            <Border x:Name="InfoPanelBorder" Grid.Row="2" Background="#1B1B2A" BorderThickness="1,0,0,0" BorderBrush="#333346"
+                    Visibility="{Binding InfoPanelVisible, Converter={StaticResource BoolToVisibility}}">
+                <Border BorderThickness="1,0,0,0" BorderBrush="#2D2D40">
+                    <StackPanel Orientation="Vertical" Margin="14,10">
+                        <TextBlock Text="Info" Foreground="#6C63FF" FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock TextWrapping="Wrap" Foreground="#C0BFDB" Margin="0,6,0,0"
+                                   Text="{Binding InfoText}"/>
+                    </StackPanel>
+                </Border>
+            </Border>
 
             <!-- ── Tab bar ───────────────────────────────────────── -->
                 <Border Grid.Row="3" Background="#16162A" CornerRadius="0,0,12,12"
