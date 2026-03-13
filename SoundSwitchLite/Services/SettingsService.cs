@@ -57,8 +57,30 @@ public class SettingsService
         {
             var dir = Path.GetDirectoryName(_settingsPath)!;
             Directory.CreateDirectory(dir);
+
+            // Create a timestamped backup of existing settings to allow recovery if overwritten
+            try
+            {
+                if (File.Exists(_settingsPath))
+                {
+                    var bakName = Path.Combine(dir, "settings.json." + DateTime.UtcNow.ToString("yyyyMMddTHHmmss") + ".bak");
+                    File.Copy(_settingsPath, bakName, overwrite: false);
+                }
+            }
+            catch { /* best-effort backup; ignore failures */ }
+
             var json = JsonSerializer.Serialize(settings, JsonOptions);
             File.WriteAllText(_settingsPath, json);
+
+            // Append a concise save log entry for diagnostics
+            try
+            {
+                var log = Path.Combine(dir, "save.log");
+                var entry = DateTime.UtcNow.ToString("o") + " Saved settings: DeviceMappings=" + (settings.DeviceMappings?.Count ?? 0) + ", InputDeviceMappings=" + (settings.InputDeviceMappings?.Count ?? 0) + "\n";
+                File.AppendAllText(log, entry);
+            }
+            catch { }
+
             return true;
         }
         catch (Exception ex)

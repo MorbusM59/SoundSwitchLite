@@ -45,9 +45,9 @@
                             <Trigger Property="IsHighlighted" Value="True">
                                 <Setter Property="Background" Value="#3D3A5C"/>
                             </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#4A4870"/>
-                            </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#4A4870"/>
+                                </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -60,8 +60,8 @@
             <Setter Property="Foreground" Value="#E0E0F0"/>
             <Setter Property="BorderBrush" Value="#444460"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Height" Value="36"/>
-            <Setter Property="MinWidth" Value="120"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="MinWidth" Value="150"/>
             <Setter Property="ItemContainerStyle" Value="{StaticResource DarkComboBoxItem}"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -149,6 +149,45 @@
             </Setter>
         </Style>
 
+        <!-- Thin slider matching scrollbar thumb aesthetic -->
+        <Style x:Key="ThinSlider" TargetType="Slider">
+            <Setter Property="Height" Value="18" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid>
+                            <Border Background="#2A2A3E" CornerRadius="6" Height="8" VerticalAlignment="Center"/>
+                            <Track x:Name="PART_Track" VerticalAlignment="Center">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.LineLeftCommand" Opacity="0" Focusable="False"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.LineRightCommand" Opacity="0" Focusable="False"/>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Width="14" Height="14" VerticalAlignment="Center">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border x:Name="ThumbBorder" Background="#555580" CornerRadius="7" Width="14" Height="14" VerticalAlignment="Center" />
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="#6C63FF" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsDragging" Value="True">
+                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="#7D75FF" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Small icon button (volume +/-) -->
         <Style x:Key="SmallIconButton" TargetType="Button">
             <Setter Property="Width" Value="24"/>
@@ -177,6 +216,13 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <!-- Slot-level icon button (match slot height) -->
+        <Style x:Key="SlotIconButton" TargetType="Button" BasedOn="{StaticResource SmallIconButton}">
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="FontSize" Value="14"/>
         </Style>
 
         <!-- Small info icon button -->
@@ -239,7 +285,7 @@
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="#444460"/>
-            <Setter Property="Height" Value="32"/>
+            <Setter Property="Height" Value="38"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -290,187 +336,109 @@
             </Setter>
         </Style>
 
+        <!-- Global tooltip delay -->
+        <Style TargetType="FrameworkElement">
+            <Setter Property="ToolTipService.InitialShowDelay" Value="1000"/>
+        </Style>
+
         <!-- Shared device slot DataTemplate -->
         <DataTemplate x:Key="DeviceSlotTemplate">
-            <Border Margin="0,0,0,10" CornerRadius="12" Padding="12,10"
+            <Border Margin="0,0,0,10" CornerRadius="12" Padding="20,10"
                     Background="#25253A" BorderThickness="1.5"
-                    BorderBrush="{Binding IsActive, Converter={StaticResource ActiveBorderBrush}}">
-                <StackPanel>
-                    <!-- Device row -->
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="42"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="148"/>
-                            <ColumnDefinition Width="34"/>
-                            <ColumnDefinition Width="26"/>
-                        </Grid.ColumnDefinitions>
+                    MouseLeftButtonDown="Card_MouseLeftButtonDown"
+                    MouseRightButtonDown="Card_MouseRightButtonDown"
+                    Cursor="Hand">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="{Binding IsActive, Converter={StaticResource ActiveBorderBrush}}"/>
+                        <Setter Property="Background" Value="#25253A"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsArmedForDeletion}" Value="True">
+                                <Setter Property="BorderBrush" Value="#FF5566"/>
+                                <Setter Property="Background" Value="#3A1A22"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="260"/>
+                        <ColumnDefinition Width="34"/>
+                    </Grid.ColumnDefinitions>
 
-                        <!-- Play/activate button -->
-                        <Button Grid.Column="0" Width="34" Height="34"
-                                Click="PlayButton_Click" Tag="{Binding}"
-                                Cursor="Hand" ToolTip="{Binding ActivateButtonTooltip}">
-                            <Button.Background>
-                                <Binding Path="IsActive" Converter="{StaticResource ActiveButtonBrush}"/>
-                            </Button.Background>
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="Button">
-                                                <Border Background="{TemplateBinding Background}" CornerRadius="17" Width="34" Height="34">
-                                                    <fa:IconBlock Icon="Play" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                  Foreground="{Binding IsActive, Converter={StaticResource ActiveForegroundBrush}}" Width="14" Height="14" />
-                                                </Border>
-                                                <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter Property="Opacity" Value="0.85"/>
-                                                    </Trigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+                    <!-- Device selector -->
+                    <ComboBox Grid.Column="0" Margin="0,0,20,0"
+                              Style="{StaticResource DarkComboBox}"
+                              ItemsSource="{Binding AvailableDevices}"
+                              SelectedItem="{Binding SelectedDevice, Mode=TwoWay}"
+                              DisplayMemberPath="Name"
+                              SelectionChanged="DeviceComboBox_SelectionChanged"
+                              Tag="{Binding}"
+                              ToolTip="Select device. Right click for additional information."
+                              MouseRightButtonDown="Element_MouseRightButtonDown"/>
 
-                        <!-- Device selector -->
-                        <ComboBox Grid.Column="1" Margin="8,0,8,0"
-                                  Style="{StaticResource DarkComboBox}"
-                                  ItemsSource="{Binding AvailableDevices}"
-                                  SelectedItem="{Binding SelectedDevice, Mode=TwoWay}"
-                                  DisplayMemberPath="Name"
-                                  SelectionChanged="DeviceComboBox_SelectionChanged"
-                                  Tag="{Binding}"/>
-
-                        <!-- Hotkey field -->
-                        <Border Grid.Column="2" Height="34" CornerRadius="8"
-                                Cursor="Hand"
-                                MouseLeftButtonDown="HotkeyField_MouseLeftButtonDown"
-                                MouseRightButtonDown="HotkeyField_MouseRightButtonDown"
-                                Tag="{Binding}"
-                                ToolTip="Left-click to assign hotkey; right-click to clear">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Background" Value="#2A2A3E"/>
-                                    <Setter Property="BorderThickness" Value="1"/>
-                                    <Setter Property="BorderBrush" Value="#444460"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsListening}" Value="True">
-                                            <Setter Property="BorderBrush" Value="#6C63FF"/>
-                                            <Setter Property="Background" Value="#2E2A4A"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <TextBlock Text="{Binding HotkeyDisplay}"
-                                       Foreground="#C0BFDB" FontSize="11"
-                                       VerticalAlignment="Center" HorizontalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"/>
+                    <!-- Inline base volume controls -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,20,0">
+                        <Button Content="&#8722;" Style="{StaticResource SlotIconButton}" Margin="0,0,5,0"
+                                Click="VolumeDecrement_Click" Tag="{Binding}"
+                                ToolTip="Decrease base volume. Right click for additional information."
+                                PreviewMouseLeftButtonDown="VolumeButton_PreviewMouseDown"
+                                PreviewMouseLeftButtonUp="VolumeButton_PreviewMouseUp"
+                                MouseLeave="VolumeButton_MouseLeave"
+                                MouseRightButtonDown="Element_MouseRightButtonDown"/>
+                        <Border Width="64" Height="34" Background="#2A2A3E"
+                                BorderBrush="#444460" BorderThickness="1" CornerRadius="6"
+                                Margin="0,0,5,0">
+                            <TextBox Text="{Binding BaseVolume, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     Background="Transparent" Foreground="#E0E0F0"
+                                     BorderThickness="0" TextAlignment="Center"
+                                     VerticalAlignment="Center" FontSize="12" Height="34"
+                                     LostFocus="BaseVolumeTextBox_LostFocus"
+                                     PreviewTextInput="NumberOnly_PreviewTextInput"
+                                     DataObject.Pasting="NumberOnly_Pasting"
+                                     Tag="Base volume value. Right click for additional information."
+                                     ToolTip="Base volume. Right click for additional information."
+                                     MouseRightButtonDown="Element_MouseRightButtonDown"/>
                         </Border>
+                        <Button Content="+" Style="{StaticResource SlotIconButton}"
+                                Click="VolumeIncrement_Click" Tag="{Binding}"
+                                ToolTip="Increase base volume. Right click for additional information."
+                                PreviewMouseLeftButtonDown="VolumeButton_PreviewMouseDown"
+                                PreviewMouseLeftButtonUp="VolumeButton_PreviewMouseUp"
+                                MouseLeave="VolumeButton_MouseLeave"
+                                MouseRightButtonDown="Element_MouseRightButtonDown"/>
+                    </StackPanel>
 
-                        <!-- Remove button (disabled when this slot is the active device) -->
-                        <Button Grid.Column="3" Width="26" Height="26" Margin="6,0,0,0"
-                            Click="RemoveSlot_Click" Tag="{Binding}"
-                            Cursor="Hand">
-                            <Button.ToolTip>
-                                <ToolTip>
-                                    <TextBlock>
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text" Value="Remove this slot"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                        <Setter Property="Text" Value="Cannot remove the active device"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </ToolTip>
-                            </Button.ToolTip>
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Setter Property="Background" Value="Transparent"/>
-                                    <Setter Property="Foreground" Value="#666680"/>
-                                    <Setter Property="Opacity" Value="1"/>
-                                    <Setter Property="Cursor" Value="Hand"/>
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="Button">
-                                                <Border Background="{TemplateBinding Background}" CornerRadius="6" Width="26" Height="26">
-                                                    <TextBlock Text="&#x2715;"
-                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                               Foreground="{TemplateBinding Foreground}" FontSize="11"/>
-                                                </Border>
-                                                <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter Property="Background" Value="#3D2A3A"/>
-                                                        <Setter Property="Foreground" Value="#FF6680"/>
-                                                    </Trigger>
-                                                    <Trigger Property="IsEnabled" Value="False">
-                                                        <Setter Property="Foreground" Value="#3A3A50"/>
-                                                    </Trigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                            <Setter Property="IsEnabled" Value="False"/>
-                                            <Setter Property="Opacity" Value="0.35"/>
-                                            <Setter Property="Cursor" Value="Arrow"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <!-- Info icon for the slot -->
-                        <Button Grid.Column="4" Style="{StaticResource InfoIconButton}" Margin="6,0,0,0"
-                                Click="InfoButton_Click" Tag="Select a device for this slot. Click to see more details.">
-                            <fa:IconBlock Icon="InfoCircle" HorizontalAlignment="Center" VerticalAlignment="Center" Width="12" Height="12" Foreground="#C0BFDB" />
-                        </Button>
-                    </Grid>
+                    <!-- Hotkey field -->
+                    <Border Grid.Column="2" Height="34" CornerRadius="8" Margin="0"
+                            Cursor="Hand"
+                            MouseLeftButtonDown="HotkeyField_MouseLeftButtonDown"
+                            MouseRightButtonDown="HotkeyField_MouseRightButtonDown"
+                            Tag="{Binding}"
+                            ToolTip="Left-click to assign hotkey; right-click to clear">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="#2A2A3E"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                                <Setter Property="BorderBrush" Value="#444460"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsListening}" Value="True">
+                                        <Setter Property="BorderBrush" Value="#6C63FF"/>
+                                        <Setter Property="Background" Value="#2E2A4A"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="{Binding HotkeyDisplay}"
+                                   Foreground="#C0BFDB" FontSize="11"
+                                   VerticalAlignment="Center" HorizontalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </Border>
 
-                    <!-- Base volume row -->
-                    <Grid Margin="0,8,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Base volume:"
-                                   Foreground="#C0BFDB" FontSize="12"
-                                   VerticalAlignment="Center" Margin="4,0,10,0"/>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <!-- Decrement -->
-                                <Button Content="&#8722;" Style="{StaticResource SmallIconButton}"
-                                    Click="VolumeDecrement_Click" Tag="{Binding}"
-                                    PreviewMouseLeftButtonDown="VolumeButton_PreviewMouseDown"
-                                    PreviewMouseLeftButtonUp="VolumeButton_PreviewMouseUp"
-                                    MouseLeave="VolumeButton_MouseLeave"
-                                    ToolTip="Decrease base volume"/>
-                            <!-- Editable value -->
-                            <Border Width="46" Height="24" Background="#2A2A3E"
-                                    BorderBrush="#444460" BorderThickness="1" CornerRadius="5"
-                                    Margin="5,0">
-                                <TextBox Text="{Binding BaseVolume, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                         Background="Transparent" Foreground="#E0E0F0"
-                                         BorderThickness="0" TextAlignment="Center"
-                                         VerticalAlignment="Center" FontSize="12"
-                                         LostFocus="BaseVolumeTextBox_LostFocus"
-                                         PreviewTextInput="NumberOnly_PreviewTextInput"
-                                         DataObject.Pasting="NumberOnly_Pasting"/>
-                            </Border>
-                                <!-- Increment -->
-                                <Button Content="+" Style="{StaticResource SmallIconButton}"
-                                    Click="VolumeIncrement_Click" Tag="{Binding}"
-                                    PreviewMouseLeftButtonDown="VolumeButton_PreviewMouseDown"
-                                    PreviewMouseLeftButtonUp="VolumeButton_PreviewMouseUp"
-                                    MouseLeave="VolumeButton_MouseLeave"
-                                    ToolTip="Increase base volume"/>
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
+                    <!-- Remove button removed — right-click on inactive card arms/deletes -->
+                </Grid>
             </Border>
         </DataTemplate>
 
@@ -546,13 +514,8 @@
                         <Slider Grid.Column="1" Minimum="0" Maximum="100"
                                 Value="{Binding MasterVolume, Mode=TwoWay}"
                                 VerticalAlignment="Center"
-                                ValueChanged="MasterVolumeSlider_ValueChanged">
-                            <Slider.Style>
-                                <Style TargetType="Slider">
-                                    <Setter Property="Foreground" Value="#6C63FF"/>
-                                </Style>
-                            </Slider.Style>
-                        </Slider>
+                                ValueChanged="MasterVolumeSlider_ValueChanged"
+                                Style="{StaticResource ThinSlider}"/>
                         <TextBlock Grid.Column="2"
                                    Text="{Binding MasterVolume, StringFormat='{}{0}%'}"
                                    Foreground="#C0BFDB" FontSize="12"
@@ -568,21 +531,31 @@
 
                 <!-- Footer buttons -->
                 <Border Grid.Row="2" Padding="14,6,14,10">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
-                                Visibility="{Binding CanAddOutputDevice, Converter={StaticResource BoolToVisibility}}">
-                    <Button Content="+ Add Device"
-                        Style="{StaticResource PrimaryButton}"
-                        Padding="18,0"
-                        Click="AddOutputDevice_Click"/>
-                        <Button Style="{StaticResource InfoIconButton}" Click="InfoButton_Click" Tag="Add a new output slot. Click for more info." Margin="6,0,0,0"/>
-
-                    <Button Content="Send other devices to unused"
-                        Style="{StaticResource SecondaryButton}"
-                        Padding="14,0"
-                        Margin="8,0,0,0"
-                        Click="SendOutputToUnused_Click"/>
-                        <Button Style="{StaticResource InfoIconButton}" Click="InfoButton_Click" Tag="Moves unused output devices into the Unused list." Margin="6,0,0,0"/>
-                    </StackPanel>
+                    <Grid Visibility="{Binding OutputFooterVisible, Converter={StaticResource BoolToVisibility}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="+ Add Device"
+                            Style="{StaticResource PrimaryButton}"
+                            Padding="18,0"
+                            Click="AddOutputDevice_Click"
+                            Tag="Add a new output slot. Right click for additional information."
+                            ToolTip="Add a new output slot. Right click for additional information."
+                            MouseRightButtonDown="Element_MouseRightButtonDown"
+                            HorizontalAlignment="Stretch"
+                            Visibility="{Binding CanAddOutputDevice, Converter={StaticResource BoolToVisibility}}"/>
+                        <Button Grid.Column="2" Content="Send other devices to unused"
+                            Style="{StaticResource SecondaryButton}"
+                            Padding="14,0"
+                            Click="SendOutputToUnused_Click"
+                            Tag="Send other devices to unused. Right click for additional information."
+                            ToolTip="Send other devices to unused. Right click for additional information."
+                            MouseRightButtonDown="Element_MouseRightButtonDown"
+                            HorizontalAlignment="Stretch"
+                            Visibility="{Binding CanSendOutputDevices, Converter={StaticResource BoolToVisibility}}"/>
+                    </Grid>
                 </Border>
             </Grid>
 
@@ -607,16 +580,12 @@
                         <TextBlock Grid.Column="0" Text="Master volume"
                                    Foreground="#C0BFDB" FontSize="12" FontWeight="SemiBold"
                                    VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <Slider Grid.Column="1" Minimum="0" Maximum="100"
-                                Value="{Binding MasterVolume, Mode=TwoWay}"
-                                VerticalAlignment="Center"
-                                ValueChanged="MasterVolumeSlider_ValueChanged">
-                            <Slider.Style>
-                                <Style TargetType="Slider">
-                                    <Setter Property="Foreground" Value="#6C63FF"/>
-                                </Style>
-                            </Slider.Style>
-                        </Slider>
+                        <Border Grid.Column="1" Background="#2A2A3E" CornerRadius="8" Padding="6,6" VerticalAlignment="Center">
+                                <Slider Minimum="0" Maximum="100" Value="{Binding MasterVolume, Mode=TwoWay}" ValueChanged="MasterVolumeSlider_ValueChanged"
+                                        Style="{StaticResource ThinSlider}"
+                                        Tag="Master volume. Right click for additional information."
+                                        MouseRightButtonDown="Element_MouseRightButtonDown"/>
+                        </Border>
                         <TextBlock Grid.Column="2"
                                    Text="{Binding MasterVolume, StringFormat='{}{0}%'}"
                                    Foreground="#C0BFDB" FontSize="12"
@@ -632,21 +601,31 @@
 
                 <!-- Footer buttons (compact) -->
                 <Border Grid.Row="2" Padding="14,6,14,10">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
-                        Visibility="{Binding CanAddInputDevice, Converter={StaticResource BoolToVisibility}}">
-                    <Button Content="+ Add Device"
-                        Style="{StaticResource PrimaryButton}"
-                        Padding="18,0"
-                        Click="AddInputDevice_Click"/>
-                    <Button Style="{StaticResource InfoIconButton}" Click="InfoButton_Click" Tag="Add a new input slot. Click for more info." Margin="6,0,0,0"/>
-
-                    <Button Content="Send other devices to unused"
-                        Style="{StaticResource SecondaryButton}"
-                        Padding="14,0"
-                        Margin="8,0,0,0"
-                        Click="SendInputToUnused_Click"/>
-                    <Button Style="{StaticResource InfoIconButton}" Click="InfoButton_Click" Tag="Moves unused input devices into the Unused list." Margin="6,0,0,0"/>
-                    </StackPanel>
+                    <Grid Visibility="{Binding InputFooterVisible, Converter={StaticResource BoolToVisibility}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="+ Add Device"
+                            Style="{StaticResource PrimaryButton}"
+                            Padding="18,0"
+                            Click="AddInputDevice_Click"
+                            Tag="Add a new input slot. Right click for additional information."
+                            ToolTip="Add a new input slot. Right click for additional information."
+                            MouseRightButtonDown="Element_MouseRightButtonDown"
+                            HorizontalAlignment="Stretch"
+                            Visibility="{Binding CanAddInputDevice, Converter={StaticResource BoolToVisibility}}"/>
+                        <Button Grid.Column="2" Content="Send other devices to unused"
+                            Style="{StaticResource SecondaryButton}"
+                            Padding="14,0"
+                            Click="SendInputToUnused_Click"
+                            Tag="Send other devices to unused. Right click for additional information."
+                            ToolTip="Send other devices to unused. Right click for additional information."
+                            MouseRightButtonDown="Element_MouseRightButtonDown"
+                            HorizontalAlignment="Stretch"
+                            Visibility="{Binding CanSendInputDevices, Converter={StaticResource BoolToVisibility}}"/>
+                    </Grid>
                 </Border>
             </Grid>
 
@@ -670,10 +649,11 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Margin="0,0,0,6" CornerRadius="10" Padding="12,10"
-                                                Background="#25253A" BorderThickness="1" BorderBrush="#333346"
-                                                Cursor="Hand" Tag="{Binding}"
-                                                MouseLeftButtonDown="RestoreOutputDevice_Click"
-                                                ToolTip="Click to restore this device">
+                                            Background="#25253A" BorderThickness="1" BorderBrush="#333346"
+                                            Cursor="Hand" Tag="{Binding}"
+                                            MouseLeftButtonDown="RestoreOutputDevice_Click"
+                                            ToolTip="Restore device. Right click for additional information."
+                                            MouseRightButtonDown="Element_MouseRightButtonDown">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -683,9 +663,11 @@
                                                            Foreground="#E0E0F0" FontSize="13"
                                                            VerticalAlignment="Center"/>
                                                 <Button Grid.Column="1" Style="{StaticResource SecondaryButton}"
-                                                        Width="68" Height="26" Padding="6,0"
-                                                        Click="RestoreOutputDevice_ButtonClick"
-                                                        Tag="{Binding}">
+                                                    Width="68" Height="26" Padding="6,0"
+                                                    Click="RestoreOutputDevice_ButtonClick"
+                                                    Tag="{Binding}"
+                                                    ToolTip="Restore device. Right click for additional information."
+                                                    MouseRightButtonDown="Element_MouseRightButtonDown">
                                                     <fa:IconBlock Icon="Undo" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#6C63FF" Width="14" Height="14" />
                                                 </Button>
                                             </Grid>
@@ -708,10 +690,11 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Margin="0,0,0,6" CornerRadius="10" Padding="12,10"
-                                                Background="#25253A" BorderThickness="1" BorderBrush="#333346"
-                                                Cursor="Hand" Tag="{Binding}"
-                                                MouseLeftButtonDown="RestoreInputDevice_Click"
-                                                ToolTip="Click to restore this device">
+                                            Background="#25253A" BorderThickness="1" BorderBrush="#333346"
+                                            Cursor="Hand" Tag="{Binding}"
+                                            MouseLeftButtonDown="RestoreInputDevice_Click"
+                                            ToolTip="Restore device. Right click for additional information."
+                                            MouseRightButtonDown="Element_MouseRightButtonDown">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -721,9 +704,11 @@
                                                            Foreground="#E0E0F0" FontSize="13"
                                                            VerticalAlignment="Center"/>
                                                 <Button Grid.Column="1" Style="{StaticResource SecondaryButton}"
-                                                        Width="68" Height="26" Padding="6,0"
-                                                        Click="RestoreInputDevice_ButtonClick"
-                                                        Tag="{Binding}">
+                                                    Width="68" Height="26" Padding="6,0"
+                                                    Click="RestoreInputDevice_ButtonClick"
+                                                    Tag="{Binding}"
+                                                    ToolTip="Restore device. Right click for additional information."
+                                                    MouseRightButtonDown="Element_MouseRightButtonDown">
                                                     <fa:IconBlock Icon="Undo" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#6C63FF" Width="14" Height="14" />
                                                 </Button>
                                             </Grid>
@@ -736,49 +721,100 @@
                 </ScrollViewer>
             </Grid>
 
-            <!-- ── Tab bar ───────────────────────────────────────── -->
-            <!-- Bottom info panel (collapsible) -->
-            <Border x:Name="InfoPanelBorder" Grid.Row="2" Background="#1B1B2A" BorderThickness="1,0,0,0" BorderBrush="#333346"
-                    Visibility="{Binding InfoPanelVisible, Converter={StaticResource BoolToVisibility}}">
-                <Border BorderThickness="1,0,0,0" BorderBrush="#2D2D40">
-                    <StackPanel Orientation="Vertical" Margin="14,10">
-                        <TextBlock Text="Info" Foreground="#6C63FF" FontWeight="SemiBold" FontSize="12"/>
-                        <TextBlock TextWrapping="Wrap" Foreground="#C0BFDB" Margin="0,6,0,0"
-                                   Text="{Binding InfoText}"/>
+            <!-- ── Info tab content (replaces the old collapsible info panel) -->
+            <Grid Grid.Row="1" Visibility="{Binding IsInfoTabSelected, Converter={StaticResource BoolToVisibility}}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14,10,14,10">
+                    <StackPanel>
+                            <TextBlock Text="Overview" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Text="SoundSwitch Lite is a minimal tray-first utility for quickly switching audio devices and assigning global hotkeys." Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                            <TextBlock Text="Features" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,6,0,4"/>
+                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">
+                                • System tray operation and single-instance behavior
+                            </TextBlock>
+                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">
+                                • Assign global hotkeys to device slots for one-press switching
+                            </TextBlock>
+                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">
+                                • Per-slot base-volume override and master volume control
+                            </TextBlock>
+
+                            <Separator Margin="0,8,0,8"/>
+
+                            <TextBlock Text="Quick Start" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,6">1. Click &quot;+ Add Device&quot; to create a slot.</TextBlock>
+                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,6">2. Use the dropdown to select a system device for the slot. Click the card to activate that device.</TextBlock>
+                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,6">3. Click the hotkey field and press the desired key combination to assign a global shortcut.</TextBlock>
+                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">4. To remove a slot: right-click an inactive card to arm it for deletion; right-click again to confirm removal.</TextBlock>
+
+                            <Separator Margin="0,8,0,8"/>
+
+                            <TextBlock Text="Hotkeys" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">Hotkeys are global. Assign with the hotkey field; clear by right-clicking the field. Careful to avoid conflicting system shortcuts.</TextBlock>
+
+                            <TextBlock Text="Settings &amp; Persistence" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,6">All mappings and hotkeys are stored in your AppData folder:</TextBlock>
+                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">%AppData%\SoundSwitchLite\settings.json</TextBlock>
+
+                            <Separator Margin="0,8,0,8"/>
+
+                            <TextBlock Text="Unused Devices" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">Devices you send to &quot;Unused&quot; are removed from the slot list and can be restored from the Unused tab.</TextBlock>
+
+                            <Separator Margin="0,8,0,8"/>
+
+                            <TextBlock Text="Troubleshooting" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,6">• If the app cannot change devices, ensure you have appropriate audio drivers and that another application is not exclusively using the device.</TextBlock>
+                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,6">• You may see package compatibility warnings for the AudioSwitcher libraries; the app attempts to initialize audio safely and will continue running with degraded functionality if required.</TextBlock>
+                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">• If XAML-generated files are missing after editing, try cleaning the project (`dotnet clean`) and rebuilding to regenerate BAML/.g.cs artifacts.</TextBlock>
+
+                            <Separator Margin="0,8,0,8"/>
+
+                            <TextBlock Text="License" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap">SoundSwitch Lite is provided under the MIT License. See the repository README for details.</TextBlock>
                     </StackPanel>
-                </Border>
-            </Border>
+                </ScrollViewer>
+            </Grid>
 
             <!-- ── Tab bar ───────────────────────────────────────── -->
                 <Border Grid.Row="3" Background="#16162A" CornerRadius="0,0,12,12"
                     BorderBrush="#2D2D40" BorderThickness="0,1,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                     <Button Grid.Column="0"
-                            Content="&#128266; Output"
-                            Style="{StaticResource TabButton}"
-                            Background="{Binding IsOutputTabSelected, Converter={StaticResource TabActiveBrush}}"
-                            Foreground="{Binding IsOutputTabSelected, Converter={StaticResource TabActiveFgBrush}}"
-                            Click="TabOutput_Click"/>
+                        Content="&#128266; Output"
+                        Style="{StaticResource TabButton}"
+                        Background="{Binding IsOutputTabSelected, Converter={StaticResource TabActiveBrush}}"
+                        Foreground="{Binding IsOutputTabSelected, Converter={StaticResource TabActiveFgBrush}}"
+                        Click="TabOutput_Click"/>
 
                     <Button Grid.Column="1"
-                            Content="&#127908; Input"
-                            Style="{StaticResource TabButton}"
-                            Background="{Binding IsInputTabSelected, Converter={StaticResource TabActiveBrush}}"
-                            Foreground="{Binding IsInputTabSelected, Converter={StaticResource TabActiveFgBrush}}"
-                            Click="TabInput_Click"/>
+                        Content="&#127908; Input"
+                        Style="{StaticResource TabButton}"
+                        Background="{Binding IsInputTabSelected, Converter={StaticResource TabActiveBrush}}"
+                        Foreground="{Binding IsInputTabSelected, Converter={StaticResource TabActiveFgBrush}}"
+                        Click="TabInput_Click"/>
 
                     <Button Grid.Column="2"
-                            Content="&#128230; Unused"
-                            Style="{StaticResource TabButton}"
-                            Background="{Binding IsUnusedTabSelected, Converter={StaticResource TabActiveBrush}}"
-                            Foreground="{Binding IsUnusedTabSelected, Converter={StaticResource TabActiveFgBrush}}"
-                            Click="TabUnused_Click"/>
+                        Content="&#128230; Unused"
+                        Style="{StaticResource TabButton}"
+                        Background="{Binding IsUnusedTabSelected, Converter={StaticResource TabActiveBrush}}"
+                        Foreground="{Binding IsUnusedTabSelected, Converter={StaticResource TabActiveFgBrush}}"
+                        Click="TabUnused_Click"/>
+
+                    <Button Grid.Column="3"
+                        Style="{StaticResource TabButton}"
+                        Background="{Binding IsInfoTabSelected, Converter={StaticResource TabActiveBrush}}"
+                        Foreground="{Binding IsInfoTabSelected, Converter={StaticResource TabActiveFgBrush}}"
+                        Click="TabInfo_Click">
+                    <fa:IconBlock Icon="InfoCircle" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Button>
                 </Grid>
             </Border>
 
