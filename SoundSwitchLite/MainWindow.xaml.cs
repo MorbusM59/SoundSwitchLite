@@ -194,8 +194,8 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
 public partial class MainWindow : Window
 {
-    // Suppress writes while initializing or refreshing to avoid overwriting existing settings
-    private bool _suppressSaves = false;
+    // Block persistence while initial bindings fire before slots are restored.
+    private bool _suppressSaves = true;
     private readonly MainWindowViewModel _viewModel = new();
     private readonly AudioDeviceService _audioService;
     private readonly HotkeyService _hotkeyService;
@@ -223,7 +223,6 @@ public partial class MainWindow : Window
         _settingsService = App.SettingsService;
 
         Loaded += OnLoaded;
-        Activated += OnActivated;
         Closing += OnWindowClosing;
     }
 
@@ -253,11 +252,6 @@ public partial class MainWindow : Window
         _ = OnLoadedAsync();
     }
 
-    private void OnActivated(object? sender, EventArgs e)
-    {
-        _ = SanityCheckDevicesAsync();
-    }
-
     private async Task OnLoadedAsync()
     {
         try
@@ -284,8 +278,8 @@ public partial class MainWindow : Window
             }
             _viewModel.NotifyUnusedChanged();
 
-            // Restore output slots (ignore completely-empty mappings saved accidentally)
-            var outputMappings = settings.DeviceMappings.Where(m => !string.IsNullOrWhiteSpace(m.DeviceId)).ToList();
+            // Restore output slots from all saved mappings so card count persists across restarts.
+            var outputMappings = settings.DeviceMappings;
             if (outputMappings.Count > 0)
             {
                 foreach (var mapping in outputMappings)
@@ -300,8 +294,8 @@ public partial class MainWindow : Window
                 _viewModel.OutputSlots.Add(CreateSlot(isInput: false));
             }
 
-            // Restore input slots (ignore empty mappings)
-            var inputMappings = settings.InputDeviceMappings.Where(m => !string.IsNullOrWhiteSpace(m.DeviceId)).ToList();
+            // Restore input slots from all saved mappings so card count persists across restarts.
+            var inputMappings = settings.InputDeviceMappings;
             foreach (var mapping in inputMappings)
             {
                 var slot = CreateSlot(isInput: true);
@@ -314,7 +308,6 @@ public partial class MainWindow : Window
             RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
 
             await RefreshActiveDevice();
-            await SanityCheckDevicesAsync();
             UpdateOutputAddButtonVisibility();
             UpdateInputAddButtonVisibility();
         }
@@ -325,8 +318,6 @@ public partial class MainWindow : Window
         finally
         {
             _suppressSaves = false;
-            // Ensure we persist the final loaded state once initialization completes
-            SaveSettings();
         }
     }
 
@@ -365,97 +356,15 @@ public partial class MainWindow : Window
                              && (d.Id == slot.SelectedDevice?.Id || !usedIds.Contains(d.Id)))
                     .ToList();
 
+                if (slot.SelectedDevice != null && !avail.Any(d => d.Id == slot.SelectedDevice.Id))
+                {
+                    avail.Insert(0, slot.SelectedDevice);
+                }
+
                 slot.AvailableDevices = avail;
             }
         }
         finally { _isRefreshingDevices = false; }
-    }
-
-    // Read current system devices/volumes and align UI state without changing system volumes.
-    private async Task SanityCheckDevicesAsync()
-    {
-        try
-        {
-            _allOutputDevices = (await _audioService.GetPlaybackDevicesAsync()).ToList();
-            _allInputDevices = (await _audioService.GetCaptureDevicesAsync()).ToList();
-
-            // Update slots to reference current AudioDevice instances (or clear if missing)
-            foreach (var slot in _viewModel.OutputSlots)
-            {
-                if (slot.SelectedDevice != null)
-                {
-                    var match = _allOutputDevices.FirstOrDefault(d => d.Id == slot.SelectedDevice.Id);
-                    slot.SelectedDevice = match; // will set null if missing
-                }
-            }
-            foreach (var slot in _viewModel.InputSlots)
-            {
-                if (slot.SelectedDevice != null)
-                {
-                    var match = _allInputDevices.FirstOrDefault(d => d.Id == slot.SelectedDevice.Id);
-                    slot.SelectedDevice = match;
-                }
-            }
-
-            // Prune unused lists: remove devices that are no longer active in the audio system.
-            // The Unused list is user-controlled (via Send/Restore actions) — we must never
-            // add to it automatically, as that would prevent unassigned devices from appearing
-            // in slot drop-downs.
-            var activeOutputIds = _allOutputDevices.Select(d => d.Id).ToHashSet();
-            foreach (var d in _viewModel.UnusedOutputDevices.ToList())
-                if (!activeOutputIds.Contains(d.Id)) _viewModel.UnusedOutputDevices.Remove(d);
-
-            var activeInputIds = _allInputDevices.Select(d => d.Id).ToHashSet();
-            foreach (var d in _viewModel.UnusedInputDevices.ToList())
-                if (!activeInputIds.Contains(d.Id)) _viewModel.UnusedInputDevices.Remove(d);
-
-            _viewModel.NotifyUnusedChanged();
-
-            // Refresh dropdowns
-            RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
-            RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
-
-            // Find default devices and adjust displayed master volume to reflect system state
-            var defaultPlayback = await _audioService.GetDefaultDeviceIdAsync();
-            var defaultCapture = await _audioService.GetDefaultCaptureDeviceIdAsync();
-
-            foreach (var s in _viewModel.OutputSlots) s.IsActive = s.SelectedDevice?.Id == defaultPlayback;
-            foreach (var s in _viewModel.InputSlots) s.IsActive = s.SelectedDevice?.Id == defaultCapture;
-
-            // If there's an active output slot, infer master from system volume and slot base
-            var activeOut = _viewModel.OutputSlots.FirstOrDefault(s => s.IsActive && s.SelectedDevice != null);
-            if (activeOut != null)
-            {
-                var sysVol = await _audioService.GetVolumeAsync(activeOut.SelectedDevice!.Id) ?? _viewModel.MasterVolume;
-                var baseVal = Math.Max(1, activeOut.BaseVolume);
-                var inferred = (int)Math.Round(sysVol / (double)baseVal * 100.0);
-                if (inferred > 100)
-                {
-                    _viewModel.MasterVolume = 100;
-                }
-                else
-                {
-                    _viewModel.MasterVolume = Math.Clamp(inferred, 0, 100);
-                }
-            }
-
-            // If no active output slot but active input exists, optionally infer from input (less prioritized)
-            else
-            {
-                var activeIn = _viewModel.InputSlots.FirstOrDefault(s => s.IsActive && s.SelectedDevice != null);
-                if (activeIn != null)
-                {
-                    var sysVol = await _audioService.GetCaptureVolumeAsync(activeIn.SelectedDevice!.Id) ?? _viewModel.MasterVolume;
-                    var baseVal = Math.Max(1, activeIn.BaseVolume);
-                    var inferred = (int)Math.Round(sysVol / (double)baseVal * 100.0);
-                    _viewModel.MasterVolume = Math.Clamp(inferred, 0, 100);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            try { System.IO.File.AppendAllText(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { }
-        }
     }
 
     private async Task RefreshActiveDevice()
@@ -1035,10 +944,9 @@ public partial class MainWindow : Window
         var settings = new AppSettings
         {
             MasterVolume = _viewModel.MasterVolume,
-            // Only persist slots which have a selected device to avoid overwriting
-            // previously saved mappings with empty placeholders.
-            DeviceMappings = _viewModel.OutputSlots.Select(MappingFromSlot).Where(m => !string.IsNullOrWhiteSpace(m.DeviceId)).ToList(),
-            InputDeviceMappings = _viewModel.InputSlots.Select(MappingFromSlot).Where(m => !string.IsNullOrWhiteSpace(m.DeviceId)).ToList(),
+            // Persist all slots so user-created cards survive restarts.
+            DeviceMappings = _viewModel.OutputSlots.Select(MappingFromSlot).ToList(),
+            InputDeviceMappings = _viewModel.InputSlots.Select(MappingFromSlot).ToList(),
             UnusedOutputDeviceIds = _viewModel.UnusedOutputDevices.Select(d => d.Id).ToList(),
             UnusedInputDeviceIds = _viewModel.UnusedInputDevices.Select(d => d.Id).ToList()
         };

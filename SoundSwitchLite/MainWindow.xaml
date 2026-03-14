@@ -362,7 +362,7 @@
                 </Border.Style>
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*" MinWidth="250"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="260"/>
                         <ColumnDefinition Width="34"/>
