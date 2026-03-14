@@ -11,6 +11,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using SoundSwitchLite.Models;
 using SoundSwitchLite.Services;
 
@@ -221,6 +222,7 @@ public partial class MainWindow : Window
 
     // System volume polling
     private DispatcherTimer? _volumePollTimer;
+    private bool _suppressMasterVolumeApply;
 
     // Info auto-hide timer (removed — info moved to separate tab)
 
@@ -418,7 +420,7 @@ public partial class MainWindow : Window
                     {
                         if (inferred > 100)
                             await _audioService.SetVolumeAsync(defaultOutputId, activeSlot.BaseVolume);
-                        _viewModel.MasterVolume = newMaster;
+                        AnimateMasterSlider(MasterVolumeSlider, _viewModel.MasterVolume, newMaster, isInput: false);
                         SaveSettings();
                     }
                 }
@@ -440,7 +442,7 @@ public partial class MainWindow : Window
                     {
                         if (inferred > 100)
                             await _audioService.SetCaptureVolumeAsync(defaultInputId, activeSlot.BaseVolume);
-                        _viewModel.InputMasterVolume = newMaster;
+                        AnimateMasterSlider(InputMasterVolumeSlider, _viewModel.InputMasterVolume, newMaster, isInput: true);
                         SaveSettings();
                     }
                 }
@@ -654,6 +656,7 @@ public partial class MainWindow : Window
 
     private void MasterVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (_suppressMasterVolumeApply) return;
         _ = OutputMasterVolumeSlider_ValueChangedAsync();
     }
 
@@ -664,12 +667,38 @@ public partial class MainWindow : Window
 
     private void InputMasterVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (_suppressMasterVolumeApply) return;
         _ = InputMasterVolumeSlider_ValueChangedAsync();
     }
 
     private async Task InputMasterVolumeSlider_ValueChangedAsync()
     {
         try { await ApplyInputMasterVolumeAsync(); SaveSettings(); } catch (Exception ex) { try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { } }
+    }
+
+    private void AnimateMasterSlider(Slider slider, int fromValue, int toValue, bool isInput)
+    {
+        // Update ViewModel immediately so the text label reflects the new value at once.
+        if (isInput)
+            _viewModel.InputMasterVolume = toValue;
+        else
+            _viewModel.MasterVolume = toValue;
+
+        _suppressMasterVolumeApply = true;
+        var anim = new DoubleAnimation
+        {
+            From = fromValue,
+            To = toValue,
+            Duration = new Duration(TimeSpan.FromMilliseconds(250)),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+            FillBehavior = FillBehavior.Stop
+        };
+        anim.Completed += (_, _) =>
+        {
+            _suppressMasterVolumeApply = false;
+            // After animation, binding (already at correct value) resumes cleanly.
+        };
+        slider.BeginAnimation(Slider.ValueProperty, anim);
     }
 
     private async Task ApplyOutputMasterVolumeAsync()
