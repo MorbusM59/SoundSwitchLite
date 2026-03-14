@@ -16,6 +16,8 @@ public class AppSettings
     public List<string> UnusedInputDeviceIds { get; set; } = new();
     /// <summary>Master volume percentage (0–100). Defaults to 100.</summary>
     public int MasterVolume { get; set; } = 100;
+    /// <summary>Input master volume percentage (0–100). Defaults to 100.</summary>
+    public int InputMasterVolume { get; set; } = 100;
 }
 
 public class SettingsService

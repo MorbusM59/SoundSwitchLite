@@ -97,6 +97,7 @@ public class DeviceSlotViewModel : INotifyPropertyChanged
 public class MainWindowViewModel : INotifyPropertyChanged
 {
     private int _masterVolume = 100;
+    private int _inputMasterVolume = 100;
     private string _selectedTab = "Output";
     private bool _canAddOutputDevice;
     private bool _canAddInputDevice;
@@ -112,6 +113,12 @@ public class MainWindowViewModel : INotifyPropertyChanged
     {
         get => _masterVolume;
         set { _masterVolume = Math.Clamp(value, 0, 100); OnPropertyChanged(); }
+    }
+
+    public int InputMasterVolume
+    {
+        get => _inputMasterVolume;
+        set { _inputMasterVolume = Math.Clamp(value, 0, 100); OnPropertyChanged(); }
     }
 
     public string SelectedTab
@@ -264,6 +271,7 @@ public partial class MainWindow : Window
 
             var settings = _settingsService.Load();
             _viewModel.MasterVolume = settings.MasterVolume;
+            _viewModel.InputMasterVolume = settings.InputMasterVolume;
 
             // Restore unused device pools
             foreach (var id in settings.UnusedOutputDeviceIds)
@@ -397,7 +405,8 @@ public partial class MainWindow : Window
     private async Task ActivateSlotDeviceAsync(DeviceSlotViewModel slot)
     {
         if (slot.SelectedDevice == null) return;
-        int effectiveVolume = (int)Math.Round(_viewModel.MasterVolume / 100.0 * slot.BaseVolume);
+        int master = slot.IsInput ? _viewModel.InputMasterVolume : _viewModel.MasterVolume;
+        int effectiveVolume = (int)Math.Round(master / 100.0 * slot.BaseVolume);
 
             if (slot.IsInput)
             {
@@ -522,17 +531,33 @@ public partial class MainWindow : Window
 
     private void MasterVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        _ = MasterVolumeSlider_ValueChangedAsync();
+        _ = OutputMasterVolumeSlider_ValueChangedAsync();
     }
 
-    private async Task MasterVolumeSlider_ValueChangedAsync()
+    private async Task OutputMasterVolumeSlider_ValueChangedAsync()
     {
-        try { await ApplyMasterVolumeAsync(); SaveSettings(); } catch (Exception ex) { try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { } }
+        try { await ApplyOutputMasterVolumeAsync(); SaveSettings(); } catch (Exception ex) { try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { } }
     }
 
-    private async Task ApplyMasterVolumeAsync()
+    private void InputMasterVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        foreach (var slot in _viewModel.OutputSlots.Concat(_viewModel.InputSlots))
+        _ = InputMasterVolumeSlider_ValueChangedAsync();
+    }
+
+    private async Task InputMasterVolumeSlider_ValueChangedAsync()
+    {
+        try { await ApplyInputMasterVolumeAsync(); SaveSettings(); } catch (Exception ex) { try { File.AppendAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite", "error.log"), DateTime.UtcNow.ToString("o") + " " + ex + "\n"); } catch { } }
+    }
+
+    private async Task ApplyOutputMasterVolumeAsync()
+    {
+        foreach (var slot in _viewModel.OutputSlots)
+            await ApplyVolumeToActiveSlotAsync(slot);
+    }
+
+    private async Task ApplyInputMasterVolumeAsync()
+    {
+        foreach (var slot in _viewModel.InputSlots)
             await ApplyVolumeToActiveSlotAsync(slot);
     }
 
@@ -540,11 +565,37 @@ public partial class MainWindow : Window
     {
         if (!force && !slot.IsActive) return;
         if (slot.SelectedDevice == null) return;
-        int effectiveVolume = (int)Math.Round(_viewModel.MasterVolume / 100.0 * slot.BaseVolume);
+        int master = slot.IsInput ? _viewModel.InputMasterVolume : _viewModel.MasterVolume;
+        int effectiveVolume = (int)Math.Round(master / 100.0 * slot.BaseVolume);
         if (slot.IsInput)
             await _audioService.SetCaptureVolumeAsync(slot.SelectedDevice.Id, effectiveVolume);
         else
             await _audioService.SetVolumeAsync(slot.SelectedDevice.Id, effectiveVolume);
+    }
+
+    private void VolumeSlider_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        try
+        {
+            if (sender is not Slider slider) return;
+
+            // Keep normal thumb dragging behavior intact.
+            var source = e.OriginalSource as DependencyObject;
+            while (source != null)
+            {
+                if (source is System.Windows.Controls.Primitives.Thumb) return;
+                source = VisualTreeHelper.GetParent(source);
+            }
+
+            var p = e.GetPosition(slider);
+            if (slider.ActualWidth <= 0) return;
+
+            var ratio = Math.Clamp(p.X / slider.ActualWidth, 0.0, 1.0);
+            if (slider.IsDirectionReversed) ratio = 1.0 - ratio;
+            slider.Value = slider.Minimum + (slider.Maximum - slider.Minimum) * ratio;
+            e.Handled = true;
+        }
+        catch { }
     }
 
     // Press-and-hold acceleration support
@@ -944,6 +995,7 @@ public partial class MainWindow : Window
         var settings = new AppSettings
         {
             MasterVolume = _viewModel.MasterVolume,
+            InputMasterVolume = _viewModel.InputMasterVolume,
             // Persist all slots so user-created cards survive restarts.
             DeviceMappings = _viewModel.OutputSlots.Select(MappingFromSlot).ToList(),
             InputDeviceMappings = _viewModel.InputSlots.Select(MappingFromSlot).ToList(),

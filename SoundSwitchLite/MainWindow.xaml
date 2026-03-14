@@ -580,14 +580,13 @@
                         <TextBlock Grid.Column="0" Text="Master volume"
                                    Foreground="#C0BFDB" FontSize="12" FontWeight="SemiBold"
                                    VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <Border Grid.Column="1" Background="#2A2A3E" CornerRadius="8" Padding="6,6" VerticalAlignment="Center">
-                                <Slider Minimum="0" Maximum="100" Value="{Binding MasterVolume, Mode=TwoWay}" ValueChanged="MasterVolumeSlider_ValueChanged"
-                                        Style="{StaticResource ThinSlider}"
-                                        Tag="Master volume. Right click for additional information."
-                                        MouseRightButtonDown="Element_MouseRightButtonDown"/>
-                        </Border>
+                        <Slider Grid.Column="1" Minimum="0" Maximum="100"
+                                Value="{Binding InputMasterVolume, Mode=TwoWay}"
+                                VerticalAlignment="Center"
+                                ValueChanged="InputMasterVolumeSlider_ValueChanged"
+                                Style="{StaticResource ThinSlider}"/>
                         <TextBlock Grid.Column="2"
-                                   Text="{Binding MasterVolume, StringFormat='{}{0}%'}"
+                                   Text="{Binding InputMasterVolume, StringFormat='{}{0}%'}"
                                    Foreground="#C0BFDB" FontSize="12"
                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
                     </Grid>
