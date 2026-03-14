@@ -219,6 +219,9 @@ public partial class MainWindow : Window
     private DeviceSlotViewModel? _repeatSlot;
     private bool _repeatIsIncrement;
     private int _repeatCount;
+    private DeviceSlotViewModel? _baseAdjustAnchorSlot;
+    private int _baseAdjustAnchorBase;
+    private int _baseAdjustAnchorWindowsVolume;
 
     // System volume polling
     private DispatcherTimer? _volumePollTimer;
@@ -343,53 +346,25 @@ public partial class MainWindow : Window
 
     private async Task SyncStateFromSystemAsync()
     {
-        // For each default device, infer the global master from (systemVol / baseVol).
-        // If inferred > 100: cap master at 100 and enforce effective volume on the system.
-        // If inferred <= 100: display inferred master without touching system volume.
+        // Keep app master in direct sync with current Windows endpoint volumes.
 
         var defaultOutputId = await _audioService.GetDefaultDeviceIdAsync();
         if (defaultOutputId != null)
         {
-            var activeSlot = _viewModel.OutputSlots.FirstOrDefault(s => s.SelectedDevice?.Id == defaultOutputId);
-            if (activeSlot != null && activeSlot.BaseVolume > 0)
+            var systemVol = await _audioService.GetVolumeAsync(defaultOutputId);
+            if (systemVol.HasValue)
             {
-                var systemVol = await _audioService.GetVolumeAsync(defaultOutputId);
-                if (systemVol.HasValue)
-                {
-                    double inferred = systemVol.Value / (activeSlot.BaseVolume / 100.0);
-                    if (inferred > 100)
-                    {
-                        _viewModel.MasterVolume = 100;
-                        await _audioService.SetVolumeAsync(defaultOutputId, activeSlot.BaseVolume);
-                    }
-                    else
-                    {
-                        _viewModel.MasterVolume = (int)Math.Round(inferred);
-                    }
-                }
+                _viewModel.MasterVolume = systemVol.Value;
             }
         }
 
         var defaultInputId = await _audioService.GetDefaultCaptureDeviceIdAsync();
         if (defaultInputId != null)
         {
-            var activeSlot = _viewModel.InputSlots.FirstOrDefault(s => s.SelectedDevice?.Id == defaultInputId);
-            if (activeSlot != null && activeSlot.BaseVolume > 0)
+            var systemVol = await _audioService.GetCaptureVolumeAsync(defaultInputId);
+            if (systemVol.HasValue)
             {
-                var systemVol = await _audioService.GetCaptureVolumeAsync(defaultInputId);
-                if (systemVol.HasValue)
-                {
-                    double inferred = systemVol.Value / (activeSlot.BaseVolume / 100.0);
-                    if (inferred > 100)
-                    {
-                        _viewModel.InputMasterVolume = 100;
-                        await _audioService.SetCaptureVolumeAsync(defaultInputId, activeSlot.BaseVolume);
-                    }
-                    else
-                    {
-                        _viewModel.InputMasterVolume = (int)Math.Round(inferred);
-                    }
-                }
+                _viewModel.InputMasterVolume = systemVol.Value;
             }
         }
 
@@ -407,25 +382,18 @@ public partial class MainWindow : Window
     {
         if (_draggingSlider != null) return;
 
-        // Read fresh system volumes and update the global masters if they've changed.
+        // Mirror fresh system endpoint volume values into the app master sliders.
         var defaultOutputId = await _audioService.GetDefaultDeviceIdAsync();
         if (defaultOutputId != null)
         {
-            var activeSlot = _viewModel.OutputSlots.FirstOrDefault(s => s.SelectedDevice?.Id == defaultOutputId);
-            if (activeSlot != null && activeSlot.BaseVolume > 0)
+            var systemVol = await _audioService.GetVolumeFreshAsync(defaultOutputId);
+            if (systemVol.HasValue)
             {
-                var systemVol = await _audioService.GetVolumeFreshAsync(defaultOutputId);
-                if (systemVol.HasValue)
+                int newMaster = systemVol.Value;
+                if (Math.Abs(newMaster - _viewModel.MasterVolume) >= 1)
                 {
-                    double inferred = systemVol.Value / (activeSlot.BaseVolume / 100.0);
-                    int newMaster = inferred > 100 ? 100 : (int)Math.Round(inferred);
-                    if (Math.Abs(newMaster - _viewModel.MasterVolume) >= 1)
-                    {
-                        if (inferred > 100)
-                            await _audioService.SetVolumeAsync(defaultOutputId, activeSlot.BaseVolume);
-                        AnimateMasterSlider(MasterVolumeSlider, _viewModel.MasterVolume, newMaster, isInput: false);
-                        SaveSettings();
-                    }
+                    AnimateMasterSlider(MasterVolumeSlider, _viewModel.MasterVolume, newMaster, isInput: false);
+                    SaveSettings();
                 }
             }
         }
@@ -433,21 +401,14 @@ public partial class MainWindow : Window
         var defaultInputId = await _audioService.GetDefaultCaptureDeviceIdAsync();
         if (defaultInputId != null)
         {
-            var activeSlot = _viewModel.InputSlots.FirstOrDefault(s => s.SelectedDevice?.Id == defaultInputId);
-            if (activeSlot != null && activeSlot.BaseVolume > 0)
+            var systemVol = await _audioService.GetCaptureVolumeFreshAsync(defaultInputId);
+            if (systemVol.HasValue)
             {
-                var systemVol = await _audioService.GetCaptureVolumeFreshAsync(defaultInputId);
-                if (systemVol.HasValue)
+                int newMaster = systemVol.Value;
+                if (Math.Abs(newMaster - _viewModel.InputMasterVolume) >= 1)
                 {
-                    double inferred = systemVol.Value / (activeSlot.BaseVolume / 100.0);
-                    int newMaster = inferred > 100 ? 100 : (int)Math.Round(inferred);
-                    if (Math.Abs(newMaster - _viewModel.InputMasterVolume) >= 1)
-                    {
-                        if (inferred > 100)
-                            await _audioService.SetCaptureVolumeAsync(defaultInputId, activeSlot.BaseVolume);
-                        AnimateMasterSlider(InputMasterVolumeSlider, _viewModel.InputMasterVolume, newMaster, isInput: true);
-                        SaveSettings();
-                    }
+                    AnimateMasterSlider(InputMasterVolumeSlider, _viewModel.InputMasterVolume, newMaster, isInput: true);
+                    SaveSettings();
                 }
             }
         }
@@ -562,8 +523,16 @@ public partial class MainWindow : Window
     private async Task ActivateSlotDeviceAsync(DeviceSlotViewModel slot)
     {
         if (slot.SelectedDevice == null) return;
-        int master = slot.IsInput ? _viewModel.InputMasterVolume : _viewModel.MasterVolume;
-        int effectiveVolume = (int)Math.Round(master / 100.0 * slot.BaseVolume);
+        var sameDomainSlots = slot.IsInput ? _viewModel.InputSlots : _viewModel.OutputSlots;
+        var sourceSlot = sameDomainSlots.FirstOrDefault(s => s.IsActive && s.SelectedDevice != null);
+        int currentWindowsVolume = slot.IsInput ? _viewModel.InputMasterVolume : _viewModel.MasterVolume;
+
+        // Carry over the current relative level between device bases when switching slots.
+        int targetVolume = slot.BaseVolume;
+        if (sourceSlot != null && sourceSlot.BaseVolume > 0 && slot.BaseVolume >= 0)
+            targetVolume = (int)Math.Round(currentWindowsVolume * (slot.BaseVolume / (double)sourceSlot.BaseVolume));
+        targetVolume = Math.Clamp(targetVolume, 0, 100);
+
         var targetDeviceId = slot.SelectedDevice.Id;
 
         if (slot.IsInput)
@@ -573,7 +542,8 @@ public partial class MainWindow : Window
 
             // Avoid one-click lag when Windows default-device propagation is briefly delayed.
             MarkSlotActiveOptimistically(slot);
-            await _audioService.SetCaptureVolumeAsync(targetDeviceId, effectiveVolume);
+            _viewModel.InputMasterVolume = targetVolume;
+            await _audioService.SetCaptureVolumeAsync(targetDeviceId, targetVolume);
         }
         else
         {
@@ -582,7 +552,8 @@ public partial class MainWindow : Window
 
             // Avoid one-click lag when Windows default-device propagation is briefly delayed.
             MarkSlotActiveOptimistically(slot);
-            await _audioService.SetVolumeAsync(targetDeviceId, effectiveVolume);
+            _viewModel.MasterVolume = targetVolume;
+            await _audioService.SetVolumeAsync(targetDeviceId, targetVolume);
         }
 
         await RefreshActiveDeviceWithRetryAsync(targetDeviceId, slot.IsInput);
@@ -620,8 +591,9 @@ public partial class MainWindow : Window
         {
             if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot)
             {
+                int previousBase = slot.BaseVolume;
                 slot.BaseVolume--;
-                await ApplyVolumeToActiveSlotAsync(slot);
+                await ApplyScaledVolumeForBaseChangeAsync(slot, previousBase);
                 SaveSettings();
             }
         }
@@ -642,8 +614,9 @@ public partial class MainWindow : Window
         {
             if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot)
             {
+                int previousBase = slot.BaseVolume;
                 slot.BaseVolume++;
-                await ApplyVolumeToActiveSlotAsync(slot);
+                await ApplyScaledVolumeForBaseChangeAsync(slot, previousBase);
                 SaveSettings();
             }
         }
@@ -680,12 +653,13 @@ public partial class MainWindow : Window
         {
             if (sender is TextBox tb && tb.DataContext is DeviceSlotViewModel slot)
             {
+                int previousBase = slot.BaseVolume;
                 // Parse and clamp; reset display if the field is empty or non-numeric.
                 if (int.TryParse(tb.Text, out int val))
                     slot.BaseVolume = val; // property setter clamps to 0-100
                 else
                     tb.Text = slot.BaseVolume.ToString(); // restore last valid value
-                await ApplyVolumeToActiveSlotAsync(slot, force: true);
+                await ApplyScaledVolumeForBaseChangeAsync(slot, previousBase, force: true);
                 SaveSettings();
             }
         }
@@ -745,25 +719,84 @@ public partial class MainWindow : Window
     private async Task ApplyOutputMasterVolumeAsync()
     {
         foreach (var slot in _viewModel.OutputSlots)
-            await ApplyVolumeToActiveSlotAsync(slot);
+            await ApplyMasterToActiveSlotAsync(slot);
     }
 
     private async Task ApplyInputMasterVolumeAsync()
     {
         foreach (var slot in _viewModel.InputSlots)
-            await ApplyVolumeToActiveSlotAsync(slot);
+            await ApplyMasterToActiveSlotAsync(slot);
     }
 
-    private async Task ApplyVolumeToActiveSlotAsync(DeviceSlotViewModel slot, bool force = false)
+    private async Task ApplyMasterToActiveSlotAsync(DeviceSlotViewModel slot, bool force = false)
     {
         if (!force && !slot.IsActive) return;
         if (slot.SelectedDevice == null) return;
         int master = slot.IsInput ? _viewModel.InputMasterVolume : _viewModel.MasterVolume;
-        int effectiveVolume = (int)Math.Round(master / 100.0 * slot.BaseVolume);
         if (slot.IsInput)
-            await _audioService.SetCaptureVolumeAsync(slot.SelectedDevice.Id, effectiveVolume);
+            await _audioService.SetCaptureVolumeAsync(slot.SelectedDevice.Id, master);
         else
-            await _audioService.SetVolumeAsync(slot.SelectedDevice.Id, effectiveVolume);
+            await _audioService.SetVolumeAsync(slot.SelectedDevice.Id, master);
+    }
+
+    private async Task ApplyScaledVolumeForBaseChangeAsync(DeviceSlotViewModel slot, int previousBase, bool force = false)
+    {
+        if (!force && !slot.IsActive) return;
+        if (slot.SelectedDevice == null) return;
+        int currentWindowsVolume = slot.IsInput ? _viewModel.InputMasterVolume : _viewModel.MasterVolume;
+
+        int sourceBase = previousBase;
+        int sourceWindowsVolume = currentWindowsVolume;
+        if (_baseAdjustAnchorSlot == slot && _baseAdjustAnchorBase > 0)
+        {
+            sourceBase = _baseAdjustAnchorBase;
+            sourceWindowsVolume = _baseAdjustAnchorWindowsVolume;
+        }
+
+        int newWindowsVolume = currentWindowsVolume;
+        if (sourceBase > 0)
+        {
+            double scaled = sourceWindowsVolume * (slot.BaseVolume / (double)sourceBase);
+            newWindowsVolume = Math.Clamp((int)Math.Round(scaled), 0, 100);
+        }
+
+        if (slot.IsInput)
+        {
+            _viewModel.InputMasterVolume = newWindowsVolume;
+            await _audioService.SetCaptureVolumeAsync(slot.SelectedDevice.Id, newWindowsVolume);
+        }
+        else
+        {
+            _viewModel.MasterVolume = newWindowsVolume;
+            await _audioService.SetVolumeAsync(slot.SelectedDevice.Id, newWindowsVolume);
+        }
+    }
+
+    private void BeginBaseAdjustAnchor(DeviceSlotViewModel slot)
+    {
+        if (!slot.IsActive) return;
+
+        _baseAdjustAnchorSlot = slot;
+        _baseAdjustAnchorBase = slot.BaseVolume;
+        _baseAdjustAnchorWindowsVolume = slot.IsInput ? _viewModel.InputMasterVolume : _viewModel.MasterVolume;
+    }
+
+    private void ClearBaseAdjustAnchor()
+    {
+        _baseAdjustAnchorSlot = null;
+        _baseAdjustAnchorBase = 0;
+        _baseAdjustAnchorWindowsVolume = 0;
+    }
+
+    private async Task ApplyBasePresetToActiveSlotAsync(DeviceSlotViewModel slot, bool force = false)
+    {
+        if (!force && !slot.IsActive) return;
+        if (slot.SelectedDevice == null) return;
+        int preset = slot.BaseVolume;
+        if (slot.IsInput)
+            await _audioService.SetCaptureVolumeAsync(slot.SelectedDevice.Id, preset);
+        else
+            await _audioService.SetVolumeAsync(slot.SelectedDevice.Id, preset);
     }
 
     private void VolumeSlider_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -834,6 +867,7 @@ public partial class MainWindow : Window
     {
         if (sender is Button btn && btn.Tag is DeviceSlotViewModel slot)
         {
+            BeginBaseAdjustAnchor(slot);
             _repeatSlot = slot;
             _repeatIsIncrement = (btn.Content?.ToString() == "+");
             _repeatCount = 0;
@@ -856,8 +890,9 @@ public partial class MainWindow : Window
         try
         {
             if (_repeatSlot == null || _volumeRepeatTimer == null) return;
+            int previousBase = _repeatSlot.BaseVolume;
             if (_repeatIsIncrement) _repeatSlot.BaseVolume++; else _repeatSlot.BaseVolume--;
-            await ApplyVolumeToActiveSlotAsync(_repeatSlot, force: true);
+            await ApplyScaledVolumeForBaseChangeAsync(_repeatSlot, previousBase, force: true);
             SaveSettings();
             _repeatCount++;
             double nextInterval = Math.Max(1.0 / 20.0, 1.0 / (4 + _repeatCount));
@@ -877,6 +912,7 @@ public partial class MainWindow : Window
             _volumeRepeatTimer.Tick -= VolumeRepeatTimer_Tick;
             _volumeRepeatTimer = null;
         }
+        ClearBaseAdjustAnchor();
         _repeatSlot = null;
         _repeatCount = 0;
     }
