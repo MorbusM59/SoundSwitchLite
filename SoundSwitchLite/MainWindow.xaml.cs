@@ -712,7 +712,7 @@ public partial class MainWindow : Window
 
     private async Task ApplyScaledVolumeForBaseChangeAsync(DeviceSlotViewModel slot, int previousBase, bool force = false)
     {
-        if (!force && !slot.IsActive) return;
+        if (!slot.IsActive) return;
         if (slot.SelectedDevice == null) return;
         int currentWindowsVolume = slot.IsInput ? _viewModel.InputMasterVolume : _viewModel.MasterVolume;
 
