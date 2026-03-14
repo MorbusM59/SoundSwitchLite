@@ -12,6 +12,8 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using Microsoft.Win32;
+using FontAwesome.Sharp;
 using SoundSwitchLite.Models;
 using SoundSwitchLite.Services;
 
@@ -187,6 +189,13 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
 public partial class MainWindow : Window
 {
+    private enum ThemeMode
+    {
+        Dark,
+        Light,
+        System
+    }
+
     // Block persistence while initial bindings fire before slots are restored.
     private bool _suppressSaves = true;
     private bool _loaded;
@@ -212,6 +221,7 @@ public partial class MainWindow : Window
     private DispatcherTimer? _volumePollTimer;
     private bool _suppressMasterVolumeApply;
     private Slider? _draggingSlider;
+    private ThemeMode _themeMode = ThemeMode.System;
 
     // Info auto-hide timer (removed — info moved to separate tab)
 
@@ -226,6 +236,7 @@ public partial class MainWindow : Window
 
         Loaded += OnLoaded;
         Closing += OnWindowClosing;
+        SystemEvents.UserPreferenceChanged += OnSystemUserPreferenceChanged;
     }
 
     private void Element_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
@@ -275,6 +286,9 @@ public partial class MainWindow : Window
             var settings = _settingsService.Load();
             _viewModel.MasterVolume = settings.MasterVolume;
             _viewModel.InputMasterVolume = settings.InputMasterVolume;
+            _themeMode = ParseThemeMode(settings.ThemeMode);
+            ApplyTheme(_themeMode);
+            UpdateThemeToggleUi();
 
             // Restore unused device pools
             foreach (var id in settings.UnusedOutputDeviceIds)
@@ -1185,6 +1199,25 @@ public partial class MainWindow : Window
             DragMove();
     }
 
+    private void ThemeToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        _themeMode = _themeMode switch
+        {
+            ThemeMode.Dark => ThemeMode.Light,
+            ThemeMode.Light => ThemeMode.System,
+            _ => ThemeMode.Dark
+        };
+
+        ApplyTheme(_themeMode);
+        UpdateThemeToggleUi();
+        SaveSettings();
+    }
+
+    private void MinimizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Hide();
 
     private void OnWindowClosing(object? sender, CancelEventArgs e)
@@ -1196,7 +1229,187 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _volumePollTimer?.Stop();
+        SystemEvents.UserPreferenceChanged -= OnSystemUserPreferenceChanged;
         base.OnClosed(e);
+    }
+
+    private void OnSystemUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+    {
+        if (_themeMode != ThemeMode.System) return;
+
+        Dispatcher.Invoke(() =>
+        {
+            ApplyTheme(_themeMode);
+            UpdateThemeToggleUi();
+        });
+    }
+
+    private static ThemeMode ParseThemeMode(string? mode)
+    {
+        return mode?.Trim().ToLowerInvariant() switch
+        {
+            "dark" => ThemeMode.Dark,
+            "light" => ThemeMode.Light,
+            _ => ThemeMode.System
+        };
+    }
+
+    private static string SerializeThemeMode(ThemeMode mode)
+    {
+        return mode switch
+        {
+            ThemeMode.Dark => "Dark",
+            ThemeMode.Light => "Light",
+            _ => "System"
+        };
+    }
+
+    private void UpdateThemeToggleUi()
+    {
+        if (ThemeToggleIcon == null || ThemeToggleButton == null) return;
+
+        ThemeToggleIcon.Icon = _themeMode switch
+        {
+            ThemeMode.Dark => IconChar.Moon,
+            ThemeMode.Light => IconChar.Sun,
+            _ => IconChar.Desktop
+        };
+
+        string effective = IsDarkThemeEffective(_themeMode) ? "Dark" : "Light";
+        ThemeToggleButton.ToolTip = _themeMode == ThemeMode.System
+            ? $"Theme: System ({effective})"
+            : $"Theme: {SerializeThemeMode(_themeMode)}";
+    }
+
+    private void ApplyTheme(ThemeMode mode)
+    {
+        bool useDark = IsDarkThemeEffective(mode);
+
+        if (useDark)
+        {
+            SetBrushColor("ColorAccent", "#6C63FF");
+            SetBrushColor("ColorAccentHover", "#7D75FF");
+            SetBrushColor("ColorAccentPressed", "#5A52D5");
+            SetBrushColor("ColorAppBackground", "#1E1E2E");
+            SetBrushColor("ColorTitlebarBackground", "#16162A");
+            SetBrushColor("ColorWindowBorder", "#2D2D40");
+            SetBrushColor("ColorCardBackground", "#25253A");
+            SetBrushColor("ColorControlBackground", "#2A2A3E");
+            SetBrushColor("ColorControlHoverBackground", "#3D3A5C");
+            SetBrushColor("ColorControlPressedBackground", "#4A4870");
+            SetBrushColor("ColorControlListeningBackground", "#2E2A4A");
+            SetBrushColor("ColorBorderSubtle", "#333346");
+            SetBrushColor("ColorBorderDefault", "#444460");
+            SetBrushColor("ColorSliderTrack", "#2A2A3E");
+            SetBrushColor("ColorSliderThumb", "#555580");
+            SetBrushColor("ColorTextPrimary", "#E0E0F0");
+            SetBrushColor("ColorTextSecondary", "#C0BFDB");
+            SetBrushColor("ColorTextMuted", "#888899");
+            SetBrushColor("ColorTextDim", "#666680");
+            SetBrushColor("ColorDangerBorder", "#FF5566");
+            SetBrushColor("ColorDangerBackground", "#3A1A22");
+            SetBrushColor("ColorCloseHover", "#CC3355");
+        }
+        else
+        {
+            SetBrushColor("ColorAccent", "#2F55D4");
+            SetBrushColor("ColorAccentHover", "#3C67F0");
+            SetBrushColor("ColorAccentPressed", "#2848B3");
+            SetBrushColor("ColorAppBackground", "#EEF1F7");
+            SetBrushColor("ColorTitlebarBackground", "#E3E8F2");
+            SetBrushColor("ColorWindowBorder", "#C3CDD9");
+            SetBrushColor("ColorCardBackground", "#FFFFFF");
+            SetBrushColor("ColorControlBackground", "#F6F8FC");
+            SetBrushColor("ColorControlHoverBackground", "#E9EEF8");
+            SetBrushColor("ColorControlPressedBackground", "#DCE5F6");
+            SetBrushColor("ColorControlListeningBackground", "#E6ECFB");
+            SetBrushColor("ColorBorderSubtle", "#D0D8E6");
+            SetBrushColor("ColorBorderDefault", "#BCC7D8");
+            SetBrushColor("ColorSliderTrack", "#DDE4F1");
+            SetBrushColor("ColorSliderThumb", "#7D8FAE");
+            SetBrushColor("ColorTextPrimary", "#1F2A3D");
+            SetBrushColor("ColorTextSecondary", "#34445E");
+            SetBrushColor("ColorTextMuted", "#5E6C86");
+            SetBrushColor("ColorTextDim", "#77849C");
+            SetBrushColor("ColorDangerBorder", "#D5485A");
+            SetBrushColor("ColorDangerBackground", "#FCEBED");
+            SetBrushColor("ColorCloseHover", "#E05666");
+        }
+
+        UpdateThemeConverters();
+    }
+
+    private bool IsDarkThemeEffective(ThemeMode mode)
+    {
+        return mode switch
+        {
+            ThemeMode.Dark => true,
+            ThemeMode.Light => false,
+            _ => IsSystemInDarkMode()
+        };
+    }
+
+    private static bool IsSystemInDarkMode()
+    {
+        try
+        {
+            object? value = Registry.GetValue(
+                @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                "AppsUseLightTheme",
+                1);
+
+            if (value is int i)
+                return i == 0;
+        }
+        catch
+        {
+        }
+
+        return true;
+    }
+
+    private void SetBrushColor(string key, string colorHex)
+    {
+        var color = (Color)ColorConverter.ConvertFromString(colorHex);
+        Resources[key] = new SolidColorBrush(color);
+    }
+
+    private void UpdateThemeConverters()
+    {
+        if (TryFindResource("ActiveBorderBrush") is SoundSwitchLite.Converters.BoolToBrushConverter activeBorder)
+        {
+            activeBorder.TrueBrush = GetThemeBrush("ColorAccent");
+            activeBorder.FalseBrush = GetThemeBrush("ColorBorderSubtle");
+        }
+
+        if (TryFindResource("ActiveButtonBrush") is SoundSwitchLite.Converters.BoolToBrushConverter activeButton)
+        {
+            activeButton.TrueBrush = GetThemeBrush("ColorAccent");
+            activeButton.FalseBrush = GetThemeBrush("ColorControlBackground");
+        }
+
+        if (TryFindResource("ActiveForegroundBrush") is SoundSwitchLite.Converters.BoolToBrushConverter activeFg)
+        {
+            activeFg.TrueBrush = GetThemeBrush("ColorTextPrimary");
+            activeFg.FalseBrush = GetThemeBrush("ColorTextDim");
+        }
+
+        if (TryFindResource("TabActiveBrush") is SoundSwitchLite.Converters.BoolToBrushConverter tabBg)
+        {
+            tabBg.TrueBrush = GetThemeBrush("ColorAccent");
+            tabBg.FalseBrush = Brushes.Transparent;
+        }
+
+        if (TryFindResource("TabActiveFgBrush") is SoundSwitchLite.Converters.BoolToBrushConverter tabFg)
+        {
+            tabFg.TrueBrush = GetThemeBrush("ColorTextPrimary");
+            tabFg.FalseBrush = GetThemeBrush("ColorTextMuted");
+        }
+    }
+
+    private Brush GetThemeBrush(string key)
+    {
+        return TryFindResource(key) as Brush ?? Brushes.Transparent;
     }
 
     private void SaveSettings()
@@ -1206,6 +1419,7 @@ public partial class MainWindow : Window
         {
             MasterVolume = _viewModel.MasterVolume,
             InputMasterVolume = _viewModel.InputMasterVolume,
+            ThemeMode = SerializeThemeMode(_themeMode),
             // Persist all slots so user-created cards survive restarts.
             DeviceMappings = _viewModel.OutputSlots.Select(MappingFromSlot).ToList(),
             InputDeviceMappings = _viewModel.InputSlots.Select(MappingFromSlot).ToList(),

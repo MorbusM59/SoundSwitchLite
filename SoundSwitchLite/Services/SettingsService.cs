@@ -18,6 +18,8 @@ public class AppSettings
     public int MasterVolume { get; set; } = 100;
     /// <summary>Input master volume percentage (0–100). Defaults to 100.</summary>
     public int InputMasterVolume { get; set; } = 100;
+    /// <summary>Theme mode: Dark, Light, or System. Defaults to System.</summary>
+    public string ThemeMode { get; set; } = "System";
 }
 
 public class SettingsService

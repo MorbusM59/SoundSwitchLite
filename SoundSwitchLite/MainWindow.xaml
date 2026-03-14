@@ -1,6 +1,7 @@
 <Window x:Class="SoundSwitchLite.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
         xmlns:local="clr-namespace:SoundSwitchLite"
         xmlns:converters="clr-namespace:SoundSwitchLite.Converters"
         xmlns:fa="clr-namespace:FontAwesome.Sharp;assembly=FontAwesome.Sharp"
@@ -21,28 +22,28 @@
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
 
         <!-- Visual tokens -->
-        <SolidColorBrush x:Key="ColorAccent" Color="#6C63FF"/>
-        <SolidColorBrush x:Key="ColorAccentHover" Color="#7D75FF"/>
-        <SolidColorBrush x:Key="ColorAccentPressed" Color="#5A52D5"/>
-        <SolidColorBrush x:Key="ColorAppBackground" Color="#1E1E2E"/>
-        <SolidColorBrush x:Key="ColorTitlebarBackground" Color="#16162A"/>
-        <SolidColorBrush x:Key="ColorWindowBorder" Color="#2D2D40"/>
-        <SolidColorBrush x:Key="ColorCardBackground" Color="#25253A"/>
-        <SolidColorBrush x:Key="ColorControlBackground" Color="#2A2A3E"/>
-        <SolidColorBrush x:Key="ColorControlHoverBackground" Color="#3D3A5C"/>
-        <SolidColorBrush x:Key="ColorControlPressedBackground" Color="#4A4870"/>
-        <SolidColorBrush x:Key="ColorControlListeningBackground" Color="#2E2A4A"/>
-        <SolidColorBrush x:Key="ColorBorderSubtle" Color="#333346"/>
-        <SolidColorBrush x:Key="ColorBorderDefault" Color="#444460"/>
-        <SolidColorBrush x:Key="ColorSliderTrack" Color="#2A2A3E"/>
-        <SolidColorBrush x:Key="ColorSliderThumb" Color="#555580"/>
-        <SolidColorBrush x:Key="ColorTextPrimary" Color="#E0E0F0"/>
-        <SolidColorBrush x:Key="ColorTextSecondary" Color="#C0BFDB"/>
-        <SolidColorBrush x:Key="ColorTextMuted" Color="#888899"/>
-        <SolidColorBrush x:Key="ColorTextDim" Color="#666680"/>
-        <SolidColorBrush x:Key="ColorDangerBorder" Color="#FF5566"/>
-        <SolidColorBrush x:Key="ColorDangerBackground" Color="#3A1A22"/>
-        <SolidColorBrush x:Key="ColorCloseHover" Color="#CC3355"/>
+        <SolidColorBrush x:Key="ColorAccent" Color="#6C63FF" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorAccentHover" Color="#7D75FF" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorAccentPressed" Color="#5A52D5" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorAppBackground" Color="#1E1E2E" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorTitlebarBackground" Color="#16162A" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorWindowBorder" Color="#2D2D40" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorCardBackground" Color="#25253A" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorControlBackground" Color="#2A2A3E" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorControlHoverBackground" Color="#3D3A5C" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorControlPressedBackground" Color="#4A4870" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorControlListeningBackground" Color="#2E2A4A" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorBorderSubtle" Color="#333346" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorBorderDefault" Color="#444460" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorSliderTrack" Color="#2A2A3E" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorSliderThumb" Color="#555580" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorTextPrimary" Color="#E0E0F0" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorTextSecondary" Color="#C0BFDB" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorTextMuted" Color="#888899" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorTextDim" Color="#666680" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorDangerBorder" Color="#FF5566" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorDangerBackground" Color="#3A1A22" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorCloseHover" Color="#CC3355" po:Freeze="False"/>
 
         <CornerRadius x:Key="RadiusWindow">12</CornerRadius>
         <CornerRadius x:Key="RadiusTitlebar">12,12,0,0</CornerRadius>
@@ -69,24 +70,48 @@
 
         <!-- Info tab typography tokens -->
         <Style x:Key="InfoHeadlineText" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource ColorAccent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ColorAccent}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
 
         <Style x:Key="InfoBodyText" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ColorTextSecondary}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
         <Style x:Key="InfoSectionSeparator" TargetType="Separator">
-            <Setter Property="Background" Value="{StaticResource ColorBorderSubtle}"/>
+            <Setter Property="Background" Value="{DynamicResource ColorBorderSubtle}"/>
+        </Style>
+
+        <Style x:Key="TitlebarGlyphButton" TargetType="Button">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Foreground" Value="{DynamicResource ColorTextMuted}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6" Width="28" Height="28">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ColorControlHoverBackground}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- Dark ComboBox item -->
         <Style x:Key="DarkComboBoxItem" TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="{StaticResource ColorControlBackground}"/>
-            <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}"/>
+            <Setter Property="Background" Value="{DynamicResource ColorControlBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ColorTextPrimary}"/>
             <Setter Property="Padding" Value="8,5"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -96,10 +121,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter Property="Background" Value="{StaticResource ColorControlHoverBackground}"/>
+                                <Setter Property="Background" Value="{DynamicResource ColorControlHoverBackground}"/>
                             </Trigger>
                                 <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource ColorControlPressedBackground}"/>
+                                    <Setter Property="Background" Value="{DynamicResource ColorControlPressedBackground}"/>
                                 </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -109,9 +134,9 @@
 
         <!-- Dark ComboBox -->
         <Style x:Key="DarkComboBox" TargetType="ComboBox">
-            <Setter Property="Background" Value="{StaticResource ColorControlBackground}"/>
-            <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource ColorBorderDefault}"/>
+            <Setter Property="Background" Value="{DynamicResource ColorControlBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ColorTextPrimary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ColorBorderDefault}"/>
             <Setter Property="BorderThickness" Value="{StaticResource BorderThin}"/>
             <Setter Property="Height" Value="34"/>
             <Setter Property="MinWidth" Value="150"/>
@@ -137,10 +162,10 @@
                                                     <ColumnDefinition/>
                                                     <ColumnDefinition Width="24"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Margin="10,0,8,0" VerticalAlignment="Center" Foreground="{StaticResource ColorTextPrimary}"
+                                                <TextBlock Grid.Column="0" Margin="10,0,8,0" VerticalAlignment="Center" Foreground="{DynamicResource ColorTextPrimary}"
                                                            Text="{Binding Path=SelectedItem.Name, RelativeSource={RelativeSource AncestorType=ComboBox}}"
                                                            TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Grid.Column="1" Text="&#9662;" Foreground="{StaticResource ColorTextMuted}"
+                                                <TextBlock Grid.Column="1" Text="&#9662;" Foreground="{DynamicResource ColorTextMuted}"
                                                            VerticalAlignment="Center" HorizontalAlignment="Center"/>
                                             </Grid>
                                             
@@ -151,7 +176,7 @@
                             <Popup x:Name="Popup" Placement="Bottom"
                                    IsOpen="{TemplateBinding IsDropDownOpen}"
                                    AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
-                                <Border Background="{StaticResource ColorControlBackground}" BorderBrush="{StaticResource ColorBorderDefault}" BorderThickness="{StaticResource BorderThin}"
+                                <Border Background="{DynamicResource ColorControlBackground}" BorderBrush="{DynamicResource ColorBorderDefault}" BorderThickness="{StaticResource BorderThin}"
                                     CornerRadius="{StaticResource RadiusControl}" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="200">
                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <ItemsPresenter/>
@@ -171,7 +196,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ScrollBar">
-                        <Border Background="{StaticResource ColorControlBackground}" CornerRadius="4" SnapsToDevicePixels="True">
+                        <Border Background="{DynamicResource ColorControlBackground}" CornerRadius="4" SnapsToDevicePixels="True">
                             <Track x:Name="PART_Track" IsDirectionReversed="True">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Command="ScrollBar.LineUpCommand" Opacity="0" Focusable="False"/>
@@ -183,13 +208,13 @@
                                     <Thumb>
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
-                                                <Border x:Name="ThumbBorder" Background="{StaticResource ColorSliderThumb}" CornerRadius="4" Margin="1"/>
+                                                <Border x:Name="ThumbBorder" Background="{DynamicResource ColorSliderThumb}" CornerRadius="4" Margin="1"/>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource ColorAccent}"/>
+                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="{DynamicResource ColorAccent}"/>
                                                     </Trigger>
                                                     <Trigger Property="IsDragging" Value="True">
-                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource ColorAccentHover}"/>
+                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="{DynamicResource ColorAccentHover}"/>
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
@@ -210,7 +235,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Slider">
                         <Grid>
-                            <Border Background="{StaticResource ColorSliderTrack}" CornerRadius="{StaticResource RadiusMini}" Height="8" VerticalAlignment="Center"/>
+                            <Border Background="{DynamicResource ColorSliderTrack}" CornerRadius="{StaticResource RadiusMini}" Height="8" VerticalAlignment="Center"/>
                             <Track x:Name="PART_Track" VerticalAlignment="Center">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Command="ScrollBar.LineLeftCommand" Opacity="0" Focusable="False"/>
@@ -222,13 +247,13 @@
                                     <Thumb Width="14" Height="14" VerticalAlignment="Center">
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
-                                                <Border x:Name="ThumbBorder" Background="{StaticResource ColorSliderThumb}" CornerRadius="7" Width="14" Height="14" VerticalAlignment="Center" />
+                                                <Border x:Name="ThumbBorder" Background="{DynamicResource ColorSliderThumb}" CornerRadius="7" Width="14" Height="14" VerticalAlignment="Center" />
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource ColorAccent}" />
+                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="{DynamicResource ColorAccent}" />
                                                     </Trigger>
                                                     <Trigger Property="IsDragging" Value="True">
-                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource ColorAccentHover}" />
+                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="{DynamicResource ColorAccentHover}" />
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
@@ -246,25 +271,25 @@
         <Style x:Key="SmallIconButton" TargetType="Button">
             <Setter Property="Width" Value="24"/>
             <Setter Property="Height" Value="24"/>
-            <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ColorTextSecondary}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{StaticResource ColorControlBackground}" CornerRadius="{StaticResource RadiusMini}"
+                        <Border x:Name="Bd" Background="{DynamicResource ColorControlBackground}" CornerRadius="{StaticResource RadiusMini}"
                                 Width="24" Height="24"
-                            BorderBrush="{StaticResource ColorBorderDefault}" BorderThickness="{StaticResource BorderThin}">
+                            BorderBrush="{DynamicResource ColorBorderDefault}" BorderThickness="{StaticResource BorderThin}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ColorControlHoverBackground}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource ColorAccent}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ColorControlHoverBackground}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ColorAccent}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ColorControlPressedBackground}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ColorControlPressedBackground}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -306,8 +331,8 @@
 
         <!-- Primary action button (Add Device) -->
         <Style x:Key="PrimaryButton" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource ColorAccent}"/>
-            <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}"/>
+            <Setter Property="Background" Value="{DynamicResource ColorAccent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ColorTextPrimary}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -321,10 +346,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource ColorAccentHover}"/>
+                                <Setter Property="Background" Value="{DynamicResource ColorAccentHover}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="{StaticResource ColorAccentPressed}"/>
+                                <Setter Property="Background" Value="{DynamicResource ColorAccentPressed}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -334,11 +359,11 @@
 
         <!-- Secondary action button (Send to unused) -->
         <Style x:Key="SecondaryButton" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource ColorControlBackground}"/>
-            <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}"/>
+            <Setter Property="Background" Value="{DynamicResource ColorControlBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ColorTextSecondary}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="BorderThickness" Value="{StaticResource BorderThin}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource ColorBorderDefault}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ColorBorderDefault}"/>
             <Setter Property="Height" Value="38"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -352,8 +377,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource ColorControlHoverBackground}"/>
-                                <Setter Property="BorderBrush" Value="{StaticResource ColorAccent}"/>
+                                <Setter Property="Background" Value="{DynamicResource ColorControlHoverBackground}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource ColorAccent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -398,18 +423,18 @@
         <!-- Shared device slot DataTemplate -->
         <DataTemplate x:Key="DeviceSlotTemplate">
                 <Border Margin="0,0,0,10" CornerRadius="{StaticResource RadiusCard}" Padding="20,10"
-                    Background="{StaticResource ColorCardBackground}" BorderThickness="{StaticResource BorderCard}"
+                    Background="{DynamicResource ColorCardBackground}" BorderThickness="{StaticResource BorderCard}"
                     MouseLeftButtonDown="Card_MouseLeftButtonDown"
                     MouseRightButtonDown="Card_MouseRightButtonDown"
                     Cursor="Hand">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="BorderBrush" Value="{Binding IsActive, Converter={StaticResource ActiveBorderBrush}}"/>
-                        <Setter Property="Background" Value="{StaticResource ColorCardBackground}"/>
+                        <Setter Property="Background" Value="{DynamicResource ColorCardBackground}"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsArmedForDeletion}" Value="True">
-                                <Setter Property="BorderBrush" Value="{StaticResource ColorDangerBorder}"/>
-                                <Setter Property="Background" Value="{StaticResource ColorDangerBackground}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource ColorDangerBorder}"/>
+                                <Setter Property="Background" Value="{DynamicResource ColorDangerBackground}"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -441,11 +466,11 @@
                                 PreviewMouseLeftButtonUp="VolumeButton_PreviewMouseUp"
                                 MouseLeave="VolumeButton_MouseLeave"
                                 MouseRightButtonDown="Element_MouseRightButtonDown"/>
-                        <Border Width="64" Height="34" Background="{StaticResource ColorControlBackground}"
-                            BorderBrush="{StaticResource ColorBorderDefault}" BorderThickness="{StaticResource BorderThin}" CornerRadius="{StaticResource RadiusMini}"
+                        <Border Width="64" Height="34" Background="{DynamicResource ColorControlBackground}"
+                            BorderBrush="{DynamicResource ColorBorderDefault}" BorderThickness="{StaticResource BorderThin}" CornerRadius="{StaticResource RadiusMini}"
                                 Margin="0,0,5,0">
                             <TextBox Text="{Binding BaseVolume, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                 Background="Transparent" Foreground="{StaticResource ColorTextPrimary}"
+                                 Background="Transparent" Foreground="{DynamicResource ColorTextPrimary}"
                                      BorderThickness="0" TextAlignment="Center"
                                      VerticalAlignment="Center" VerticalContentAlignment="Center" FontSize="12"
                                      LostFocus="BaseVolumeTextBox_LostFocus"
@@ -473,19 +498,19 @@
                             ToolTip="Left-click to assign hotkey; right-click to clear">
                         <Border.Style>
                             <Style TargetType="Border">
-                                <Setter Property="Background" Value="{StaticResource ColorControlBackground}"/>
+                                <Setter Property="Background" Value="{DynamicResource ColorControlBackground}"/>
                                 <Setter Property="BorderThickness" Value="{StaticResource BorderThin}"/>
-                                <Setter Property="BorderBrush" Value="{StaticResource ColorBorderDefault}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource ColorBorderDefault}"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsListening}" Value="True">
-                                        <Setter Property="BorderBrush" Value="{StaticResource ColorAccent}"/>
-                                        <Setter Property="Background" Value="{StaticResource ColorControlListeningBackground}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource ColorAccent}"/>
+                                        <Setter Property="Background" Value="{DynamicResource ColorControlListeningBackground}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Border.Style>
                         <TextBlock Text="{Binding HotkeyDisplay}"
-                                   Foreground="{StaticResource ColorTextSecondary}" FontSize="11"
+                                   Foreground="{DynamicResource ColorTextSecondary}" FontSize="11"
                                    VerticalAlignment="Center" HorizontalAlignment="Stretch"
                                    TextAlignment="Center" TextWrapping="NoWrap"
                                    Margin="8,0"
@@ -497,7 +522,7 @@
 
     </Window.Resources>
 
-    <Border Background="{StaticResource ColorAppBackground}" CornerRadius="{StaticResource RadiusWindow}" BorderBrush="{StaticResource ColorWindowBorder}" BorderThickness="{StaticResource BorderThin}">
+    <Border Background="{DynamicResource ColorAppBackground}" CornerRadius="{StaticResource RadiusWindow}" BorderBrush="{DynamicResource ColorWindowBorder}" BorderThickness="{StaticResource BorderThin}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="44"/>   <!-- title bar -->
@@ -506,34 +531,51 @@
             </Grid.RowDefinitions>
 
             <!-- ── Title bar ─────────────────────────────────────── -->
-            <Border Grid.Row="0" Background="{StaticResource ColorTitlebarBackground}" CornerRadius="{StaticResource RadiusTitlebar}"
+            <Border Grid.Row="0" Background="{DynamicResource ColorTitlebarBackground}" CornerRadius="{StaticResource RadiusTitlebar}"
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                 <Grid>
                     <TextBlock Text="&#128266;  SoundSwitch Lite"
-                               Foreground="{StaticResource ColorTextPrimary}" FontSize="14" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ColorTextPrimary}" FontSize="14" FontWeight="SemiBold"
                                VerticalAlignment="Center" Margin="16,0,0,0"/>
+
+                    <Button x:Name="ThemeToggleButton"
+                            Style="{StaticResource TitlebarGlyphButton}"
+                            HorizontalAlignment="Right" Margin="0,0,72,0"
+                            Click="ThemeToggleButton_Click"
+                            ToolTip="Theme: System">
+                        <fa:IconBlock x:Name="ThemeToggleIcon" Icon="Desktop" Width="12" Height="12"
+                                      Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                    </Button>
+
+                    <Button x:Name="MinimizeButton"
+                            Style="{StaticResource TitlebarGlyphButton}"
+                            HorizontalAlignment="Right" Margin="0,0,40,0"
+                            Click="MinimizeButton_Click"
+                            ToolTip="Minimize">
+                        <fa:IconBlock Icon="Minus" Width="12" Height="12"
+                                      Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                    </Button>
+
                     <Button x:Name="CloseButton"
-                            Width="32" Height="32" HorizontalAlignment="Right" Margin="0,0,8,0"
-                            Foreground="{StaticResource ColorTextMuted}" BorderThickness="0" FontSize="13" Cursor="Hand"
+                            HorizontalAlignment="Right" Margin="0,0,8,0"
                             Click="CloseButton_Click">
                         <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Background" Value="Transparent"/>
+                            <Style TargetType="Button" BasedOn="{StaticResource TitlebarGlyphButton}">
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}" CornerRadius="6" Width="28" Height="28">
-                                                <fa:IconBlock Icon="Times" HorizontalAlignment="Center" VerticalAlignment="Center" Width="12" Height="12" Foreground="{TemplateBinding Foreground}" />
+                                            <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6" Width="28" Height="28">
+                                                <fa:IconBlock Icon="Times" HorizontalAlignment="Center" VerticalAlignment="Center" Width="12" Height="12" Foreground="{TemplateBinding Foreground}"/>
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="{StaticResource ColorCloseHover}"/>
+                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ColorCloseHover}"/>
+                                                    <Setter Property="Foreground" Value="White"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Setter.Value>
                                 </Setter>
-                                <Setter Property="Foreground" Value="{StaticResource ColorTextMuted}"/>
                             </Style>
                         </Button.Style>
                     </Button>
@@ -553,8 +595,8 @@
 
                 <!-- Master volume card -->
                 <Border Grid.Row="0" Margin="14,10,14,0" Padding="14,8"
-                    Background="{StaticResource ColorCardBackground}" CornerRadius="{StaticResource RadiusCard}"
-                    BorderBrush="{StaticResource ColorBorderSubtle}" BorderThickness="{StaticResource BorderCard}">
+                    Background="{DynamicResource ColorCardBackground}" CornerRadius="{StaticResource RadiusCard}"
+                    BorderBrush="{DynamicResource ColorBorderSubtle}" BorderThickness="{StaticResource BorderCard}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -562,7 +604,7 @@
                             <ColumnDefinition Width="40"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Master volume"
-                                   Foreground="{StaticResource ColorTextSecondary}" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ColorTextSecondary}" FontSize="12" FontWeight="SemiBold"
                                    VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <Slider x:Name="MasterVolumeSlider" Grid.Column="1" Minimum="0" Maximum="100"
                                 Value="{Binding MasterVolume, Mode=TwoWay}"
@@ -574,7 +616,7 @@
                                 Style="{StaticResource ThinSlider}"/>
                         <TextBlock Grid.Column="2"
                                    Text="{Binding MasterVolume, StringFormat='{}{0}%'}"
-                                   Foreground="{StaticResource ColorTextSecondary}" FontSize="12"
+                                   Foreground="{DynamicResource ColorTextSecondary}" FontSize="12"
                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
                     </Grid>
                 </Border>
@@ -627,8 +669,8 @@
 
                 <!-- Master volume card (same binding) -->
                 <Border Grid.Row="0" Margin="14,10,14,0" Padding="14,8"
-                    Background="{StaticResource ColorCardBackground}" CornerRadius="{StaticResource RadiusCard}"
-                    BorderBrush="{StaticResource ColorBorderSubtle}" BorderThickness="{StaticResource BorderCard}">
+                    Background="{DynamicResource ColorCardBackground}" CornerRadius="{StaticResource RadiusCard}"
+                    BorderBrush="{DynamicResource ColorBorderSubtle}" BorderThickness="{StaticResource BorderCard}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -636,7 +678,7 @@
                             <ColumnDefinition Width="40"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Master volume"
-                                   Foreground="{StaticResource ColorTextSecondary}" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ColorTextSecondary}" FontSize="12" FontWeight="SemiBold"
                                    VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <Slider x:Name="InputMasterVolumeSlider" Grid.Column="1" Minimum="0" Maximum="100"
                                 Value="{Binding InputMasterVolume, Mode=TwoWay}"
@@ -648,7 +690,7 @@
                                 Style="{StaticResource ThinSlider}"/>
                         <TextBlock Grid.Column="2"
                                    Text="{Binding InputMasterVolume, StringFormat='{}{0}%'}"
-                                   Foreground="{StaticResource ColorTextSecondary}" FontSize="12"
+                                   Foreground="{DynamicResource ColorTextSecondary}" FontSize="12"
                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
                     </Grid>
                 </Border>
@@ -697,20 +739,20 @@
                     <StackPanel>
                         <!-- Empty state -->
                         <TextBlock Text="No unused devices"
-                                   Foreground="{StaticResource ColorSliderThumb}" FontSize="13"
+                                   Foreground="{DynamicResource ColorSliderThumb}" FontSize="13"
                                    HorizontalAlignment="Center" Margin="0,20,0,0"
                                    Visibility="{Binding HasNoUnusedDevices, Converter={StaticResource BoolToVisibility}}"/>
 
                         <!-- Unused output devices section -->
                         <StackPanel Visibility="{Binding UnusedOutputCount, Converter={StaticResource CountToVisibility}}">
                             <TextBlock Text="OUTPUT DEVICES"
-                                       Foreground="{StaticResource ColorAccent}" FontSize="10" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ColorAccent}" FontSize="10" FontWeight="SemiBold"
                                        Margin="4,0,0,6"/>
                             <ItemsControl ItemsSource="{Binding UnusedOutputDevices}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Margin="0,0,0,6" CornerRadius="10" Padding="12,10"
-                                            Background="{StaticResource ColorCardBackground}" BorderThickness="{StaticResource BorderThin}" BorderBrush="{StaticResource ColorBorderSubtle}"
+                                            Background="{DynamicResource ColorCardBackground}" BorderThickness="{StaticResource BorderThin}" BorderBrush="{DynamicResource ColorBorderSubtle}"
                                             Cursor="Hand" Tag="{Binding}"
                                             MouseLeftButtonDown="RestoreOutputDevice_Click"
                                             ToolTip="Restore device. Right click for additional information."
@@ -721,7 +763,7 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                           Foreground="{StaticResource ColorTextPrimary}" FontSize="13"
+                                                           Foreground="{DynamicResource ColorTextPrimary}" FontSize="13"
                                                            VerticalAlignment="Center"/>
                                                 <Button Grid.Column="1" Style="{StaticResource SecondaryButton}"
                                                     Width="68" Height="26" Padding="6,0"
@@ -729,7 +771,7 @@
                                                     Tag="{Binding}"
                                                     ToolTip="Restore device. Right click for additional information."
                                                     MouseRightButtonDown="Element_MouseRightButtonDown">
-                                                    <fa:IconBlock Icon="Undo" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource ColorAccent}" Width="14" Height="14" />
+                                                    <fa:IconBlock Icon="Undo" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource ColorAccent}" Width="14" Height="14" />
                                                 </Button>
                                             </Grid>
                                         </Border>
@@ -745,13 +787,13 @@
                         <!-- Unused input devices section -->
                         <StackPanel Visibility="{Binding UnusedInputCount, Converter={StaticResource CountToVisibility}}">
                             <TextBlock Text="INPUT DEVICES"
-                                       Foreground="{StaticResource ColorAccent}" FontSize="10" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ColorAccent}" FontSize="10" FontWeight="SemiBold"
                                        Margin="4,0,0,6"/>
                             <ItemsControl ItemsSource="{Binding UnusedInputDevices}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Margin="0,0,0,6" CornerRadius="10" Padding="12,10"
-                                            Background="{StaticResource ColorCardBackground}" BorderThickness="{StaticResource BorderThin}" BorderBrush="{StaticResource ColorBorderSubtle}"
+                                            Background="{DynamicResource ColorCardBackground}" BorderThickness="{StaticResource BorderThin}" BorderBrush="{DynamicResource ColorBorderSubtle}"
                                             Cursor="Hand" Tag="{Binding}"
                                             MouseLeftButtonDown="RestoreInputDevice_Click"
                                             ToolTip="Restore device. Right click for additional information."
@@ -762,7 +804,7 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                           Foreground="{StaticResource ColorTextPrimary}" FontSize="13"
+                                                           Foreground="{DynamicResource ColorTextPrimary}" FontSize="13"
                                                            VerticalAlignment="Center"/>
                                                 <Button Grid.Column="1" Style="{StaticResource SecondaryButton}"
                                                     Width="68" Height="26" Padding="6,0"
@@ -770,7 +812,7 @@
                                                     Tag="{Binding}"
                                                     ToolTip="Restore device. Right click for additional information."
                                                     MouseRightButtonDown="Element_MouseRightButtonDown">
-                                                    <fa:IconBlock Icon="Undo" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource ColorAccent}" Width="14" Height="14" />
+                                                    <fa:IconBlock Icon="Undo" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource ColorAccent}" Width="14" Height="14" />
                                                 </Button>
                                             </Grid>
                                         </Border>
@@ -838,8 +880,8 @@
             </Grid>
 
             <!-- ── Tab bar ───────────────────────────────────────── -->
-                <Border Grid.Row="2" Background="{StaticResource ColorTitlebarBackground}" CornerRadius="{StaticResource RadiusTabbar}"
-                    BorderBrush="{StaticResource ColorWindowBorder}" BorderThickness="{StaticResource BorderTabbar}">
+                <Border Grid.Row="2" Background="{DynamicResource ColorTitlebarBackground}" CornerRadius="{StaticResource RadiusTabbar}"
+                    BorderBrush="{DynamicResource ColorWindowBorder}" BorderThickness="{StaticResource BorderTabbar}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -882,3 +924,4 @@
         </Grid>
     </Border>
 </Window>
+
