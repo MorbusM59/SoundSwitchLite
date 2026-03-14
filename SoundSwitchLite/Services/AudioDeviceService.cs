@@ -137,7 +137,55 @@ public class AudioDeviceService : IDisposable
         catch { return false; }
     }
 
-    
+    /// <summary>Reads the current volume of a playback device without using the cache.</summary>
+    public async Task<int?> GetVolumeFreshAsync(string deviceId)
+    {
+        try
+        {
+            _playbackCache = null; // bust cache
+            return await GetVolumeAsync(deviceId);
+        }
+        catch { return null; }
+    }
+
+    /// <summary>Reads the current volume of a capture device without using the cache.</summary>
+    public async Task<int?> GetCaptureVolumeFreshAsync(string deviceId)
+    {
+        try
+        {
+            _captureCache = null; // bust cache
+            return await GetCaptureVolumeAsync(deviceId);
+        }
+        catch { return null; }
+    }
+
+    /// <summary>
+    /// Subscribe to system-level volume changes for any device.
+    /// Callback receives (deviceId, newVolume 0-100). Returns a disposable that cancels the subscription.
+    /// </summary>
+    public IDisposable? SubscribeVolumeChanged(Action<string, double> onVolumeChanged)
+    {
+        if (_controller == null) return null;
+        try
+        {
+            var observable = ((AudioSwitcher.AudioApi.IAudioController)_controller).AudioDeviceChanged;
+            return observable.Subscribe(new DelegateObserver<AudioSwitcher.AudioApi.DeviceChangedArgs>(e =>
+            {
+                if (e is AudioSwitcher.AudioApi.DeviceVolumeChangedArgs va)
+                    onVolumeChanged(va.Device.Id.ToString(), va.Volume);
+            }));
+        }
+        catch { return null; }
+    }
+
+    private sealed class DelegateObserver<T> : IObserver<T>
+    {
+        private readonly Action<T> _onNext;
+        public DelegateObserver(Action<T> onNext) => _onNext = onNext;
+        public void OnNext(T value) { try { _onNext(value); } catch { } }
+        public void OnError(Exception error) { }
+        public void OnCompleted() { }
+    }
 
     public void Dispose()
     {

@@ -203,6 +203,7 @@ public partial class MainWindow : Window
 {
     // Block persistence while initial bindings fire before slots are restored.
     private bool _suppressSaves = true;
+    private bool _loaded;
     private readonly MainWindowViewModel _viewModel = new();
     private readonly AudioDeviceService _audioService;
     private readonly HotkeyService _hotkeyService;
@@ -217,6 +218,9 @@ public partial class MainWindow : Window
     private DeviceSlotViewModel? _repeatSlot;
     private bool _repeatIsIncrement;
     private int _repeatCount;
+
+    // System volume polling
+    private DispatcherTimer? _volumePollTimer;
 
     // Info auto-hide timer (removed — info moved to separate tab)
 
@@ -327,6 +331,121 @@ public partial class MainWindow : Window
         {
             _suppressSaves = false;
         }
+        _loaded = true;
+        _volumePollTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
+        _volumePollTimer.Tick += async (_, _) => await PollSystemVolumeAsync();
+        _volumePollTimer.Start();
+        await SyncStateFromSystemAsync();
+    }
+
+    private async Task SyncStateFromSystemAsync()
+    {
+        // For each default device, infer the global master from (systemVol / baseVol).
+        // If inferred > 100: cap master at 100 and enforce effective volume on the system.
+        // If inferred <= 100: display inferred master without touching system volume.
+
+        var defaultOutputId = await _audioService.GetDefaultDeviceIdAsync();
+        if (defaultOutputId != null)
+        {
+            var activeSlot = _viewModel.OutputSlots.FirstOrDefault(s => s.SelectedDevice?.Id == defaultOutputId);
+            if (activeSlot != null && activeSlot.BaseVolume > 0)
+            {
+                var systemVol = await _audioService.GetVolumeAsync(defaultOutputId);
+                if (systemVol.HasValue)
+                {
+                    double inferred = systemVol.Value / (activeSlot.BaseVolume / 100.0);
+                    if (inferred > 100)
+                    {
+                        _viewModel.MasterVolume = 100;
+                        await _audioService.SetVolumeAsync(defaultOutputId, activeSlot.BaseVolume);
+                    }
+                    else
+                    {
+                        _viewModel.MasterVolume = (int)Math.Round(inferred);
+                    }
+                }
+            }
+        }
+
+        var defaultInputId = await _audioService.GetDefaultCaptureDeviceIdAsync();
+        if (defaultInputId != null)
+        {
+            var activeSlot = _viewModel.InputSlots.FirstOrDefault(s => s.SelectedDevice?.Id == defaultInputId);
+            if (activeSlot != null && activeSlot.BaseVolume > 0)
+            {
+                var systemVol = await _audioService.GetCaptureVolumeAsync(defaultInputId);
+                if (systemVol.HasValue)
+                {
+                    double inferred = systemVol.Value / (activeSlot.BaseVolume / 100.0);
+                    if (inferred > 100)
+                    {
+                        _viewModel.InputMasterVolume = 100;
+                        await _audioService.SetCaptureVolumeAsync(defaultInputId, activeSlot.BaseVolume);
+                    }
+                    else
+                    {
+                        _viewModel.InputMasterVolume = (int)Math.Round(inferred);
+                    }
+                }
+            }
+        }
+
+        await RefreshActiveDevice();
+        SaveSettings();
+    }
+
+    private void Window_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (_loaded && (bool)e.NewValue)
+            _ = SyncStateFromSystemAsync();
+    }
+
+    private async Task PollSystemVolumeAsync()
+    {
+        // Read fresh system volumes and update the global masters if they've changed.
+        var defaultOutputId = await _audioService.GetDefaultDeviceIdAsync();
+        if (defaultOutputId != null)
+        {
+            var activeSlot = _viewModel.OutputSlots.FirstOrDefault(s => s.SelectedDevice?.Id == defaultOutputId);
+            if (activeSlot != null && activeSlot.BaseVolume > 0)
+            {
+                var systemVol = await _audioService.GetVolumeFreshAsync(defaultOutputId);
+                if (systemVol.HasValue)
+                {
+                    double inferred = systemVol.Value / (activeSlot.BaseVolume / 100.0);
+                    int newMaster = inferred > 100 ? 100 : (int)Math.Round(inferred);
+                    if (Math.Abs(newMaster - _viewModel.MasterVolume) >= 1)
+                    {
+                        if (inferred > 100)
+                            await _audioService.SetVolumeAsync(defaultOutputId, activeSlot.BaseVolume);
+                        _viewModel.MasterVolume = newMaster;
+                        SaveSettings();
+                    }
+                }
+            }
+        }
+
+        var defaultInputId = await _audioService.GetDefaultCaptureDeviceIdAsync();
+        if (defaultInputId != null)
+        {
+            var activeSlot = _viewModel.InputSlots.FirstOrDefault(s => s.SelectedDevice?.Id == defaultInputId);
+            if (activeSlot != null && activeSlot.BaseVolume > 0)
+            {
+                var systemVol = await _audioService.GetCaptureVolumeFreshAsync(defaultInputId);
+                if (systemVol.HasValue)
+                {
+                    double inferred = systemVol.Value / (activeSlot.BaseVolume / 100.0);
+                    int newMaster = inferred > 100 ? 100 : (int)Math.Round(inferred);
+                    if (Math.Abs(newMaster - _viewModel.InputMasterVolume) >= 1)
+                    {
+                        if (inferred > 100)
+                            await _audioService.SetCaptureVolumeAsync(defaultInputId, activeSlot.BaseVolume);
+                        _viewModel.InputMasterVolume = newMaster;
+                        SaveSettings();
+                    }
+                }
+            }
+        }
     }
 
     private DeviceSlotViewModel CreateSlot(bool isInput)
@@ -341,9 +460,13 @@ public partial class MainWindow : Window
         slot.BaseVolume = mapping.BaseVolume != 0 ? mapping.BaseVolume : (mapping.DefaultVolume ?? 100);
         slot.ModifierKeys = mapping.ModifierKeys;
         slot.Key = mapping.Key;
+        if (slot.Key != 0)
+        {
+            slot.HotkeyDisplay = BuildHotkeyDisplayString(slot.ModifierKeys, slot.Key);
+            RegisterSlotHotkey(slot);
+        }
         var device = allDevices.FirstOrDefault(d => d.Id == mapping.DeviceId);
         if (device != null) slot.SelectedDevice = device;
-        if (slot.Key != 0) RegisterSlotHotkey(slot);
     }
 
     private void RefreshSlotDevices(IEnumerable<DeviceSlotViewModel> slots, List<AudioDevice> allDevices, ObservableCollection<AudioDevice> unused)
@@ -987,6 +1110,12 @@ public partial class MainWindow : Window
     {
         e.Cancel = true;
         Hide();
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _volumePollTimer?.Stop();
+        base.OnClosed(e);
     }
 
     private void SaveSettings()

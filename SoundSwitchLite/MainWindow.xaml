@@ -13,7 +13,8 @@
         ResizeMode="CanResizeWithGrip"
         Icon="/Assets/app.ico"
         PreviewKeyDown="Window_PreviewKeyDown"
-        PreviewKeyUp="Window_PreviewKeyUp">
+        PreviewKeyUp="Window_PreviewKeyUp"
+        IsVisibleChanged="Window_IsVisibleChanged">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
