@@ -739,6 +739,10 @@ public partial class MainWindow : Window
                 source = VisualTreeHelper.GetParent(source);
             }
 
+            // Cancel any in-flight poll animation so it doesn't fight the click.
+            _suppressMasterVolumeApply = false;
+            slider.BeginAnimation(Slider.ValueProperty, null);
+
             var p = e.GetPosition(slider);
             if (slider.ActualWidth <= 0) return;
 
