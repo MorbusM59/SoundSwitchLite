@@ -5,7 +5,7 @@
         xmlns:converters="clr-namespace:SoundSwitchLite.Converters"
         xmlns:fa="clr-namespace:FontAwesome.Sharp;assembly=FontAwesome.Sharp"
         Title="SoundSwitch Lite"
-        MinWidth="556" MinHeight="278"
+        MinWidth="556" MinHeight="281"
         Width="556" SizeToContent="Height" MaxHeight="800"
         Background="#1E1E2E"
         WindowStyle="None"
@@ -501,7 +501,8 @@
 
                 <!-- Master volume card -->
                 <Border Grid.Row="0" Margin="14,10,14,0" Padding="14,8"
-                        Background="#25253A" CornerRadius="10">
+                    Background="#25253A" CornerRadius="12"
+                    BorderBrush="#333346" BorderThickness="1.5">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -574,7 +575,8 @@
 
                 <!-- Master volume card (same binding) -->
                 <Border Grid.Row="0" Margin="14,10,14,0" Padding="14,8"
-                        Background="#25253A" CornerRadius="10">
+                    Background="#25253A" CornerRadius="12"
+                    BorderBrush="#333346" BorderThickness="1.5">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
