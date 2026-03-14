@@ -530,24 +530,62 @@ public partial class MainWindow : Window
         _viewModel.CanSendInputDevices = hasAvailable;
     }
 
+    private void MarkSlotActiveOptimistically(DeviceSlotViewModel slot)
+    {
+        if (slot.IsInput)
+        {
+            foreach (var s in _viewModel.InputSlots) s.IsActive = ReferenceEquals(s, slot);
+        }
+        else
+        {
+            foreach (var s in _viewModel.OutputSlots) s.IsActive = ReferenceEquals(s, slot);
+        }
+    }
+
+    private async Task RefreshActiveDeviceWithRetryAsync(string expectedDeviceId, bool isInput)
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            await RefreshActiveDevice();
+
+            bool expectedIsActive = isInput
+                ? _viewModel.InputSlots.Any(s => s.IsActive && s.SelectedDevice?.Id == expectedDeviceId)
+                : _viewModel.OutputSlots.Any(s => s.IsActive && s.SelectedDevice?.Id == expectedDeviceId);
+
+            if (expectedIsActive)
+                return;
+
+            await Task.Delay(80);
+        }
+    }
+
     private async Task ActivateSlotDeviceAsync(DeviceSlotViewModel slot)
     {
         if (slot.SelectedDevice == null) return;
         int master = slot.IsInput ? _viewModel.InputMasterVolume : _viewModel.MasterVolume;
         int effectiveVolume = (int)Math.Round(master / 100.0 * slot.BaseVolume);
+        var targetDeviceId = slot.SelectedDevice.Id;
 
-            if (slot.IsInput)
-            {
-                await _audioService.SetDefaultCaptureDeviceAsync(slot.SelectedDevice.Id);
-                await _audioService.SetCaptureVolumeAsync(slot.SelectedDevice.Id, effectiveVolume);
-            }
-            else
-            {
-                await _audioService.SetDefaultDeviceAsync(slot.SelectedDevice.Id);
-                await _audioService.SetVolumeAsync(slot.SelectedDevice.Id, effectiveVolume);
-            }
+        if (slot.IsInput)
+        {
+            var switched = await _audioService.SetDefaultCaptureDeviceAsync(targetDeviceId);
+            if (!switched) return;
 
-        await RefreshActiveDevice();
+            // Avoid one-click lag when Windows default-device propagation is briefly delayed.
+            MarkSlotActiveOptimistically(slot);
+            await _audioService.SetCaptureVolumeAsync(targetDeviceId, effectiveVolume);
+        }
+        else
+        {
+            var switched = await _audioService.SetDefaultDeviceAsync(targetDeviceId);
+            if (!switched) return;
+
+            // Avoid one-click lag when Windows default-device propagation is briefly delayed.
+            MarkSlotActiveOptimistically(slot);
+            await _audioService.SetVolumeAsync(targetDeviceId, effectiveVolume);
+        }
+
+        await RefreshActiveDeviceWithRetryAsync(targetDeviceId, slot.IsInput);
         ShowBalloon($"Switched to: {slot.SelectedDevice.Name}");
     }
 
