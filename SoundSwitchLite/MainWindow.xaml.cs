@@ -223,6 +223,7 @@ public partial class MainWindow : Window
     // System volume polling
     private DispatcherTimer? _volumePollTimer;
     private bool _suppressMasterVolumeApply;
+    private Slider? _draggingSlider;
 
     // Info auto-hide timer (removed — info moved to separate tab)
 
@@ -404,6 +405,8 @@ public partial class MainWindow : Window
 
     private async Task PollSystemVolumeAsync()
     {
+        if (_draggingSlider != null) return;
+
         // Read fresh system volumes and update the global masters if they've changed.
         var defaultOutputId = await _audioService.GetDefaultDeviceIdAsync();
         if (defaultOutputId != null)
@@ -749,9 +752,43 @@ public partial class MainWindow : Window
             var ratio = Math.Clamp(p.X / slider.ActualWidth, 0.0, 1.0);
             if (slider.IsDirectionReversed) ratio = 1.0 - ratio;
             slider.Value = slider.Minimum + (slider.Maximum - slider.Minimum) * ratio;
+
+            // Start drag immediately after jump when clicking the track.
+            _draggingSlider = slider;
+            slider.CaptureMouse();
             e.Handled = true;
         }
         catch { }
+    }
+
+    private void VolumeSlider_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (_draggingSlider == null || sender is not Slider slider || slider != _draggingSlider) return;
+
+        if (e.LeftButton != MouseButtonState.Pressed)
+        {
+            StopSliderDrag(slider);
+            return;
+        }
+
+        var p = e.GetPosition(slider);
+        if (slider.ActualWidth <= 0) return;
+
+        var ratio = Math.Clamp(p.X / slider.ActualWidth, 0.0, 1.0);
+        if (slider.IsDirectionReversed) ratio = 1.0 - ratio;
+        slider.Value = slider.Minimum + (slider.Maximum - slider.Minimum) * ratio;
+    }
+
+    private void VolumeSlider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Slider slider && slider == _draggingSlider)
+            StopSliderDrag(slider);
+    }
+
+    private void StopSliderDrag(Slider slider)
+    {
+        _draggingSlider = null;
+        slider.ReleaseMouseCapture();
     }
 
     // Press-and-hold acceleration support

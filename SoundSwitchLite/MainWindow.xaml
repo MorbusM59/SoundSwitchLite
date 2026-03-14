@@ -517,6 +517,8 @@
                                 VerticalAlignment="Center"
                                 ValueChanged="MasterVolumeSlider_ValueChanged"
                                 PreviewMouseLeftButtonDown="VolumeSlider_PreviewMouseLeftButtonDown"
+                                   MouseMove="VolumeSlider_MouseMove"
+                                   PreviewMouseLeftButtonUp="VolumeSlider_PreviewMouseLeftButtonUp"
                                 Style="{StaticResource ThinSlider}"/>
                         <TextBlock Grid.Column="2"
                                    Text="{Binding MasterVolume, StringFormat='{}{0}%'}"
@@ -587,6 +589,8 @@
                                 VerticalAlignment="Center"
                                 ValueChanged="InputMasterVolumeSlider_ValueChanged"
                                 PreviewMouseLeftButtonDown="VolumeSlider_PreviewMouseLeftButtonDown"
+                                   MouseMove="VolumeSlider_MouseMove"
+                                   PreviewMouseLeftButtonUp="VolumeSlider_PreviewMouseLeftButtonUp"
                                 Style="{StaticResource ThinSlider}"/>
                         <TextBlock Grid.Column="2"
                                    Text="{Binding InputMasterVolume, StringFormat='{}{0}%'}"
