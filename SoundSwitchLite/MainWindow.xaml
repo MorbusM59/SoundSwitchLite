@@ -5,8 +5,8 @@
         xmlns:converters="clr-namespace:SoundSwitchLite.Converters"
         xmlns:fa="clr-namespace:FontAwesome.Sharp;assembly=FontAwesome.Sharp"
         Title="SoundSwitch Lite"
-        MinWidth="520" MinHeight="260"
-        Width="600" SizeToContent="Height" MaxHeight="600"
+        MinWidth="556" MinHeight="278"
+        Width="556" SizeToContent="Height" MaxHeight="800"
         Background="#1E1E2E"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -450,7 +450,6 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="44"/>   <!-- title bar -->
                 <RowDefinition Height="*"/>    <!-- tab content -->
-                <RowDefinition Height="Auto"/> <!-- info panel -->
                 <RowDefinition Height="46"/>   <!-- tab bar -->
             </Grid.RowDefinitions>
 
@@ -534,8 +533,9 @@
                 </ScrollViewer>
 
                 <!-- Footer buttons -->
-                <Border Grid.Row="2" Padding="14,6,14,10">
-                    <Grid Visibility="{Binding OutputFooterVisible, Converter={StaticResource BoolToVisibility}}">
+                <Border Grid.Row="2" Padding="14,6,14,10"
+                        Visibility="{Binding OutputFooterVisible, Converter={StaticResource BoolToVisibility}}">
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="10"/>
@@ -606,8 +606,9 @@
                 </ScrollViewer>
 
                 <!-- Footer buttons (compact) -->
-                <Border Grid.Row="2" Padding="14,6,14,10">
-                    <Grid Visibility="{Binding InputFooterVisible, Converter={StaticResource BoolToVisibility}}">
+                <Border Grid.Row="2" Padding="14,6,14,10"
+                        Visibility="{Binding InputFooterVisible, Converter={StaticResource BoolToVisibility}}">
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="10"/>
