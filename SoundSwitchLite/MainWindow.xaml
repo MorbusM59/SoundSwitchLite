@@ -84,8 +84,9 @@
                                                     <ColumnDefinition/>
                                                     <ColumnDefinition Width="24"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Margin="10,0,0,0" VerticalAlignment="Center" Foreground="#E0E0F0"
-                                                           Text="{Binding Path=SelectedItem.Name, RelativeSource={RelativeSource AncestorType=ComboBox}}"/>
+                                                <TextBlock Grid.Column="0" Margin="10,0,8,0" VerticalAlignment="Center" Foreground="#E0E0F0"
+                                                           Text="{Binding Path=SelectedItem.Name, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                           TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Grid.Column="1" Text="&#9662;" Foreground="#999BB5"
                                                            VerticalAlignment="Center" HorizontalAlignment="Center"/>
                                             </Grid>
@@ -362,10 +363,9 @@
                 </Border.Style>
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" MinWidth="250"/>
+                        <ColumnDefinition Width="*" MinWidth="170"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="260"/>
-                        <ColumnDefinition Width="34"/>
+                        <ColumnDefinition Width="*" MinWidth="120"/>
                     </Grid.ColumnDefinitions>
 
                     <!-- Device selector -->
@@ -433,11 +433,11 @@
                         </Border.Style>
                         <TextBlock Text="{Binding HotkeyDisplay}"
                                    Foreground="#C0BFDB" FontSize="11"
-                                   VerticalAlignment="Center" HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                                   TextAlignment="Center" TextWrapping="NoWrap"
+                                   Margin="8,0"
                                    TextTrimming="CharacterEllipsis"/>
                     </Border>
-
-                    <!-- Remove button removed — right-click on inactive card arms/deletes -->
                 </Grid>
             </Border>
         </DataTemplate>
