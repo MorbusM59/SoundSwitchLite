@@ -12,6 +12,7 @@
         AllowsTransparency="True"
         ResizeMode="CanResizeWithGrip"
         Icon="/Assets/app.ico"
+        PreviewMouseDown="Window_PreviewMouseDown"
         PreviewKeyDown="Window_PreviewKeyDown"
         PreviewKeyUp="Window_PreviewKeyUp"
         IsVisibleChanged="Window_IsVisibleChanged">

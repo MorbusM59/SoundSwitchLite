@@ -234,6 +234,27 @@ public partial class MainWindow : Window
         // Allow elements to handle right-clicks themselves (e.g., hotkey clear).
     }
 
+    private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Right)
+            DisarmDeletionCards();
+    }
+
+    private void DisarmDeletionCards(DeviceSlotViewModel? except = null)
+    {
+        foreach (var s in _viewModel.OutputSlots)
+        {
+            if (!ReferenceEquals(s, except) && s.IsArmedForDeletion)
+                s.IsArmedForDeletion = false;
+        }
+
+        foreach (var s in _viewModel.InputSlots)
+        {
+            if (!ReferenceEquals(s, except) && s.IsArmedForDeletion)
+                s.IsArmedForDeletion = false;
+        }
+    }
+
     // Info auto-hide timer removed with panel -> Info tab.
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -905,6 +926,7 @@ public partial class MainWindow : Window
     {
         if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot)
         {
+            DisarmDeletionCards();
             ClearHotkey(slot);
             e.Handled = true;
         }
@@ -927,6 +949,7 @@ public partial class MainWindow : Window
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        DisarmDeletionCards();
         if (_listeningSlot == null) return;
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
         if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt
@@ -1018,6 +1041,8 @@ public partial class MainWindow : Window
         {
             if (sender is FrameworkElement fe && fe.DataContext is DeviceSlotViewModel slot)
             {
+                DisarmDeletionCards(slot);
+
                 // Right-click arms deletion for inactive slots; second right-click deletes.
                 if (slot.IsActive) return; // do not allow arming active slot
 
