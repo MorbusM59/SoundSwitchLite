@@ -7,7 +7,7 @@
         Title="SoundSwitch Lite"
         MinWidth="556" MinHeight="281"
         Width="556" SizeToContent="Height" MaxHeight="800"
-        Background="#1E1E2E"
+        Background="{DynamicResource ColorAppBackground}"
         WindowStyle="None"
         AllowsTransparency="True"
         ResizeMode="CanResizeWithGrip"
@@ -20,22 +20,73 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
 
+        <!-- Visual tokens -->
+        <SolidColorBrush x:Key="ColorAccent" Color="#6C63FF"/>
+        <SolidColorBrush x:Key="ColorAccentHover" Color="#7D75FF"/>
+        <SolidColorBrush x:Key="ColorAccentPressed" Color="#5A52D5"/>
+        <SolidColorBrush x:Key="ColorAppBackground" Color="#1E1E2E"/>
+        <SolidColorBrush x:Key="ColorTitlebarBackground" Color="#16162A"/>
+        <SolidColorBrush x:Key="ColorWindowBorder" Color="#2D2D40"/>
+        <SolidColorBrush x:Key="ColorCardBackground" Color="#25253A"/>
+        <SolidColorBrush x:Key="ColorControlBackground" Color="#2A2A3E"/>
+        <SolidColorBrush x:Key="ColorControlHoverBackground" Color="#3D3A5C"/>
+        <SolidColorBrush x:Key="ColorControlPressedBackground" Color="#4A4870"/>
+        <SolidColorBrush x:Key="ColorControlListeningBackground" Color="#2E2A4A"/>
+        <SolidColorBrush x:Key="ColorBorderSubtle" Color="#333346"/>
+        <SolidColorBrush x:Key="ColorBorderDefault" Color="#444460"/>
+        <SolidColorBrush x:Key="ColorSliderTrack" Color="#2A2A3E"/>
+        <SolidColorBrush x:Key="ColorSliderThumb" Color="#555580"/>
+        <SolidColorBrush x:Key="ColorTextPrimary" Color="#E0E0F0"/>
+        <SolidColorBrush x:Key="ColorTextSecondary" Color="#C0BFDB"/>
+        <SolidColorBrush x:Key="ColorTextMuted" Color="#888899"/>
+        <SolidColorBrush x:Key="ColorTextDim" Color="#666680"/>
+        <SolidColorBrush x:Key="ColorDangerBorder" Color="#FF5566"/>
+        <SolidColorBrush x:Key="ColorDangerBackground" Color="#3A1A22"/>
+        <SolidColorBrush x:Key="ColorCloseHover" Color="#CC3355"/>
+
+        <CornerRadius x:Key="RadiusWindow">12</CornerRadius>
+        <CornerRadius x:Key="RadiusTitlebar">12,12,0,0</CornerRadius>
+        <CornerRadius x:Key="RadiusTabbar">0,0,12,12</CornerRadius>
+        <CornerRadius x:Key="RadiusCard">12</CornerRadius>
+        <CornerRadius x:Key="RadiusControl">8</CornerRadius>
+        <CornerRadius x:Key="RadiusMini">6</CornerRadius>
+
+        <Thickness x:Key="BorderThin">1</Thickness>
+        <Thickness x:Key="BorderCard">1.5</Thickness>
+        <Thickness x:Key="BorderTabbar">0,1,0,0</Thickness>
+
         <converters:BoolToBrushConverter x:Key="ActiveBorderBrush"
-            TrueBrush="#6C63FF" FalseBrush="#333346"/>
+            TrueBrush="{StaticResource ColorAccent}" FalseBrush="{StaticResource ColorBorderSubtle}"/>
         <converters:BoolToBrushConverter x:Key="ActiveButtonBrush"
-            TrueBrush="#6C63FF" FalseBrush="#2A2A3E"/>
+            TrueBrush="{StaticResource ColorAccent}" FalseBrush="{StaticResource ColorControlBackground}"/>
         <converters:BoolToBrushConverter x:Key="ActiveForegroundBrush"
-            TrueBrush="#FFFFFF" FalseBrush="#666680"/>
+            TrueBrush="{StaticResource ColorTextPrimary}" FalseBrush="{StaticResource ColorTextDim}"/>
         <converters:BoolToBrushConverter x:Key="TabActiveBrush"
-            TrueBrush="#6C63FF" FalseBrush="Transparent"/>
+            TrueBrush="{StaticResource ColorAccent}" FalseBrush="Transparent"/>
         <converters:BoolToBrushConverter x:Key="TabActiveFgBrush"
-            TrueBrush="#FFFFFF" FalseBrush="#888899"/>
+            TrueBrush="{StaticResource ColorTextPrimary}" FalseBrush="{StaticResource ColorTextMuted}"/>
         <converters:CountToVisibilityConverter x:Key="CountToVisibility"/>
+
+        <!-- Info tab typography tokens -->
+        <Style x:Key="InfoHeadlineText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource ColorAccent}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <Style x:Key="InfoBodyText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <Style x:Key="InfoSectionSeparator" TargetType="Separator">
+            <Setter Property="Background" Value="{StaticResource ColorBorderSubtle}"/>
+        </Style>
 
         <!-- Dark ComboBox item -->
         <Style x:Key="DarkComboBoxItem" TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="#2A2A3E"/>
-            <Setter Property="Foreground" Value="#E0E0F0"/>
+            <Setter Property="Background" Value="{StaticResource ColorControlBackground}"/>
+            <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}"/>
             <Setter Property="Padding" Value="8,5"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -45,10 +96,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter Property="Background" Value="#3D3A5C"/>
+                                <Setter Property="Background" Value="{StaticResource ColorControlHoverBackground}"/>
                             </Trigger>
                                 <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="#4A4870"/>
+                                    <Setter Property="Background" Value="{StaticResource ColorControlPressedBackground}"/>
                                 </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -58,10 +109,10 @@
 
         <!-- Dark ComboBox -->
         <Style x:Key="DarkComboBox" TargetType="ComboBox">
-            <Setter Property="Background" Value="#2A2A3E"/>
-            <Setter Property="Foreground" Value="#E0E0F0"/>
-            <Setter Property="BorderBrush" Value="#444460"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="{StaticResource ColorControlBackground}"/>
+            <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource ColorBorderDefault}"/>
+            <Setter Property="BorderThickness" Value="{StaticResource BorderThin}"/>
             <Setter Property="Height" Value="34"/>
             <Setter Property="MinWidth" Value="150"/>
             <Setter Property="ItemContainerStyle" Value="{StaticResource DarkComboBoxItem}"/>
@@ -80,16 +131,16 @@
                                         <Border Background="{TemplateBinding Background}"
                                                 BorderBrush="{TemplateBinding BorderBrush}"
                                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                                CornerRadius="8">
+                                            CornerRadius="{StaticResource RadiusControl}">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition/>
                                                     <ColumnDefinition Width="24"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Margin="10,0,8,0" VerticalAlignment="Center" Foreground="#E0E0F0"
+                                                <TextBlock Grid.Column="0" Margin="10,0,8,0" VerticalAlignment="Center" Foreground="{StaticResource ColorTextPrimary}"
                                                            Text="{Binding Path=SelectedItem.Name, RelativeSource={RelativeSource AncestorType=ComboBox}}"
                                                            TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Grid.Column="1" Text="&#9662;" Foreground="#999BB5"
+                                                <TextBlock Grid.Column="1" Text="&#9662;" Foreground="{StaticResource ColorTextMuted}"
                                                            VerticalAlignment="Center" HorizontalAlignment="Center"/>
                                             </Grid>
                                             
@@ -100,8 +151,8 @@
                             <Popup x:Name="Popup" Placement="Bottom"
                                    IsOpen="{TemplateBinding IsDropDownOpen}"
                                    AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
-                                <Border Background="#2A2A3E" BorderBrush="#444460" BorderThickness="1"
-                                        CornerRadius="8" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="200">
+                                <Border Background="{StaticResource ColorControlBackground}" BorderBrush="{StaticResource ColorBorderDefault}" BorderThickness="{StaticResource BorderThin}"
+                                    CornerRadius="{StaticResource RadiusControl}" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="200">
                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <ItemsPresenter/>
                                     </ScrollViewer>
@@ -120,7 +171,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ScrollBar">
-                        <Border Background="#2A2A3E" CornerRadius="4" SnapsToDevicePixels="True">
+                        <Border Background="{StaticResource ColorControlBackground}" CornerRadius="4" SnapsToDevicePixels="True">
                             <Track x:Name="PART_Track" IsDirectionReversed="True">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Command="ScrollBar.LineUpCommand" Opacity="0" Focusable="False"/>
@@ -132,13 +183,13 @@
                                     <Thumb>
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
-                                                <Border x:Name="ThumbBorder" Background="#555580" CornerRadius="4" Margin="1"/>
+                                                <Border x:Name="ThumbBorder" Background="{StaticResource ColorSliderThumb}" CornerRadius="4" Margin="1"/>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="#6C63FF"/>
+                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource ColorAccent}"/>
                                                     </Trigger>
                                                     <Trigger Property="IsDragging" Value="True">
-                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="#7D75FF"/>
+                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource ColorAccentHover}"/>
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
@@ -159,7 +210,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Slider">
                         <Grid>
-                            <Border Background="#2A2A3E" CornerRadius="6" Height="8" VerticalAlignment="Center"/>
+                            <Border Background="{StaticResource ColorSliderTrack}" CornerRadius="{StaticResource RadiusMini}" Height="8" VerticalAlignment="Center"/>
                             <Track x:Name="PART_Track" VerticalAlignment="Center">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Command="ScrollBar.LineLeftCommand" Opacity="0" Focusable="False"/>
@@ -171,13 +222,13 @@
                                     <Thumb Width="14" Height="14" VerticalAlignment="Center">
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
-                                                <Border x:Name="ThumbBorder" Background="#555580" CornerRadius="7" Width="14" Height="14" VerticalAlignment="Center" />
+                                                <Border x:Name="ThumbBorder" Background="{StaticResource ColorSliderThumb}" CornerRadius="7" Width="14" Height="14" VerticalAlignment="Center" />
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="#6C63FF" />
+                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource ColorAccent}" />
                                                     </Trigger>
                                                     <Trigger Property="IsDragging" Value="True">
-                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="#7D75FF" />
+                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource ColorAccentHover}" />
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
@@ -195,25 +246,25 @@
         <Style x:Key="SmallIconButton" TargetType="Button">
             <Setter Property="Width" Value="24"/>
             <Setter Property="Height" Value="24"/>
-            <Setter Property="Foreground" Value="#C0BFDB"/>
+            <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="#2A2A3E" CornerRadius="6"
+                        <Border x:Name="Bd" Background="{StaticResource ColorControlBackground}" CornerRadius="{StaticResource RadiusMini}"
                                 Width="24" Height="24"
-                                BorderBrush="#444460" BorderThickness="1">
+                            BorderBrush="{StaticResource ColorBorderDefault}" BorderThickness="{StaticResource BorderThin}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#3D3A5C"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#6C63FF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ColorControlHoverBackground}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource ColorAccent}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#4A4870"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ColorControlPressedBackground}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -255,8 +306,8 @@
 
         <!-- Primary action button (Add Device) -->
         <Style x:Key="PrimaryButton" TargetType="Button">
-            <Setter Property="Background" Value="#6C63FF"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource ColorAccent}"/>
+            <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -270,10 +321,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#7D75FF"/>
+                                <Setter Property="Background" Value="{StaticResource ColorAccentHover}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#5A52D5"/>
+                                <Setter Property="Background" Value="{StaticResource ColorAccentPressed}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -283,11 +334,11 @@
 
         <!-- Secondary action button (Send to unused) -->
         <Style x:Key="SecondaryButton" TargetType="Button">
-            <Setter Property="Background" Value="#2A2A3E"/>
-            <Setter Property="Foreground" Value="#C0BFDB"/>
+            <Setter Property="Background" Value="{StaticResource ColorControlBackground}"/>
+            <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}"/>
             <Setter Property="FontSize" Value="12"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#444460"/>
+            <Setter Property="BorderThickness" Value="{StaticResource BorderThin}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource ColorBorderDefault}"/>
             <Setter Property="Height" Value="38"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -296,13 +347,13 @@
                         <Border Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                CornerRadius="{StaticResource RadiusControl}" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#3D3A5C"/>
-                                <Setter Property="BorderBrush" Value="#6C63FF"/>
+                                <Setter Property="Background" Value="{StaticResource ColorControlHoverBackground}"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource ColorAccent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -346,19 +397,19 @@
 
         <!-- Shared device slot DataTemplate -->
         <DataTemplate x:Key="DeviceSlotTemplate">
-            <Border Margin="0,0,0,10" CornerRadius="12" Padding="20,10"
-                    Background="#25253A" BorderThickness="1.5"
+                <Border Margin="0,0,0,10" CornerRadius="{StaticResource RadiusCard}" Padding="20,10"
+                    Background="{StaticResource ColorCardBackground}" BorderThickness="{StaticResource BorderCard}"
                     MouseLeftButtonDown="Card_MouseLeftButtonDown"
                     MouseRightButtonDown="Card_MouseRightButtonDown"
                     Cursor="Hand">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="BorderBrush" Value="{Binding IsActive, Converter={StaticResource ActiveBorderBrush}}"/>
-                        <Setter Property="Background" Value="#25253A"/>
+                        <Setter Property="Background" Value="{StaticResource ColorCardBackground}"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsArmedForDeletion}" Value="True">
-                                <Setter Property="BorderBrush" Value="#FF5566"/>
-                                <Setter Property="Background" Value="#3A1A22"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource ColorDangerBorder}"/>
+                                <Setter Property="Background" Value="{StaticResource ColorDangerBackground}"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -390,11 +441,11 @@
                                 PreviewMouseLeftButtonUp="VolumeButton_PreviewMouseUp"
                                 MouseLeave="VolumeButton_MouseLeave"
                                 MouseRightButtonDown="Element_MouseRightButtonDown"/>
-                        <Border Width="64" Height="34" Background="#2A2A3E"
-                                BorderBrush="#444460" BorderThickness="1" CornerRadius="6"
+                        <Border Width="64" Height="34" Background="{StaticResource ColorControlBackground}"
+                            BorderBrush="{StaticResource ColorBorderDefault}" BorderThickness="{StaticResource BorderThin}" CornerRadius="{StaticResource RadiusMini}"
                                 Margin="0,0,5,0">
                             <TextBox Text="{Binding BaseVolume, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                     Background="Transparent" Foreground="#E0E0F0"
+                                 Background="Transparent" Foreground="{StaticResource ColorTextPrimary}"
                                      BorderThickness="0" TextAlignment="Center"
                                      VerticalAlignment="Center" VerticalContentAlignment="Center" FontSize="12"
                                      LostFocus="BaseVolumeTextBox_LostFocus"
@@ -414,7 +465,7 @@
                     </StackPanel>
 
                     <!-- Hotkey field -->
-                    <Border Grid.Column="2" Height="34" CornerRadius="8" Margin="0"
+                        <Border Grid.Column="2" Height="34" CornerRadius="{StaticResource RadiusControl}" Margin="0"
                             Cursor="Hand"
                             MouseLeftButtonDown="HotkeyField_MouseLeftButtonDown"
                             MouseRightButtonDown="HotkeyField_MouseRightButtonDown"
@@ -422,19 +473,19 @@
                             ToolTip="Left-click to assign hotkey; right-click to clear">
                         <Border.Style>
                             <Style TargetType="Border">
-                                <Setter Property="Background" Value="#2A2A3E"/>
-                                <Setter Property="BorderThickness" Value="1"/>
-                                <Setter Property="BorderBrush" Value="#444460"/>
+                                <Setter Property="Background" Value="{StaticResource ColorControlBackground}"/>
+                                <Setter Property="BorderThickness" Value="{StaticResource BorderThin}"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource ColorBorderDefault}"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsListening}" Value="True">
-                                        <Setter Property="BorderBrush" Value="#6C63FF"/>
-                                        <Setter Property="Background" Value="#2E2A4A"/>
+                                        <Setter Property="BorderBrush" Value="{StaticResource ColorAccent}"/>
+                                        <Setter Property="Background" Value="{StaticResource ColorControlListeningBackground}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Border.Style>
                         <TextBlock Text="{Binding HotkeyDisplay}"
-                                   Foreground="#C0BFDB" FontSize="11"
+                                   Foreground="{StaticResource ColorTextSecondary}" FontSize="11"
                                    VerticalAlignment="Center" HorizontalAlignment="Stretch"
                                    TextAlignment="Center" TextWrapping="NoWrap"
                                    Margin="8,0"
@@ -446,7 +497,7 @@
 
     </Window.Resources>
 
-    <Border Background="#1E1E2E" CornerRadius="12" BorderBrush="#2D2D40" BorderThickness="1">
+    <Border Background="{StaticResource ColorAppBackground}" CornerRadius="{StaticResource RadiusWindow}" BorderBrush="{StaticResource ColorWindowBorder}" BorderThickness="{StaticResource BorderThin}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="44"/>   <!-- title bar -->
@@ -455,15 +506,15 @@
             </Grid.RowDefinitions>
 
             <!-- ── Title bar ─────────────────────────────────────── -->
-            <Border Grid.Row="0" Background="#16162A" CornerRadius="12,12,0,0"
+            <Border Grid.Row="0" Background="{StaticResource ColorTitlebarBackground}" CornerRadius="{StaticResource RadiusTitlebar}"
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                 <Grid>
                     <TextBlock Text="&#128266;  SoundSwitch Lite"
-                               Foreground="#E0E0F0" FontSize="14" FontWeight="SemiBold"
+                               Foreground="{StaticResource ColorTextPrimary}" FontSize="14" FontWeight="SemiBold"
                                VerticalAlignment="Center" Margin="16,0,0,0"/>
                     <Button x:Name="CloseButton"
                             Width="32" Height="32" HorizontalAlignment="Right" Margin="0,0,8,0"
-                            Foreground="#888899" BorderThickness="0" FontSize="13" Cursor="Hand"
+                            Foreground="{StaticResource ColorTextMuted}" BorderThickness="0" FontSize="13" Cursor="Hand"
                             Click="CloseButton_Click">
                         <Button.Style>
                             <Style TargetType="Button">
@@ -476,13 +527,13 @@
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#CC3355"/>
+                                                    <Setter Property="Background" Value="{StaticResource ColorCloseHover}"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Setter.Value>
                                 </Setter>
-                                <Setter Property="Foreground" Value="#888899"/>
+                                <Setter Property="Foreground" Value="{StaticResource ColorTextMuted}"/>
                             </Style>
                         </Button.Style>
                     </Button>
@@ -502,8 +553,8 @@
 
                 <!-- Master volume card -->
                 <Border Grid.Row="0" Margin="14,10,14,0" Padding="14,8"
-                    Background="#25253A" CornerRadius="12"
-                    BorderBrush="#333346" BorderThickness="1.5">
+                    Background="{StaticResource ColorCardBackground}" CornerRadius="{StaticResource RadiusCard}"
+                    BorderBrush="{StaticResource ColorBorderSubtle}" BorderThickness="{StaticResource BorderCard}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -511,7 +562,7 @@
                             <ColumnDefinition Width="40"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Master volume"
-                                   Foreground="#C0BFDB" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{StaticResource ColorTextSecondary}" FontSize="12" FontWeight="SemiBold"
                                    VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <Slider x:Name="MasterVolumeSlider" Grid.Column="1" Minimum="0" Maximum="100"
                                 Value="{Binding MasterVolume, Mode=TwoWay}"
@@ -523,7 +574,7 @@
                                 Style="{StaticResource ThinSlider}"/>
                         <TextBlock Grid.Column="2"
                                    Text="{Binding MasterVolume, StringFormat='{}{0}%'}"
-                                   Foreground="#C0BFDB" FontSize="12"
+                                   Foreground="{StaticResource ColorTextSecondary}" FontSize="12"
                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
                     </Grid>
                 </Border>
@@ -576,8 +627,8 @@
 
                 <!-- Master volume card (same binding) -->
                 <Border Grid.Row="0" Margin="14,10,14,0" Padding="14,8"
-                    Background="#25253A" CornerRadius="12"
-                    BorderBrush="#333346" BorderThickness="1.5">
+                    Background="{StaticResource ColorCardBackground}" CornerRadius="{StaticResource RadiusCard}"
+                    BorderBrush="{StaticResource ColorBorderSubtle}" BorderThickness="{StaticResource BorderCard}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -585,7 +636,7 @@
                             <ColumnDefinition Width="40"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Master volume"
-                                   Foreground="#C0BFDB" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{StaticResource ColorTextSecondary}" FontSize="12" FontWeight="SemiBold"
                                    VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <Slider x:Name="InputMasterVolumeSlider" Grid.Column="1" Minimum="0" Maximum="100"
                                 Value="{Binding InputMasterVolume, Mode=TwoWay}"
@@ -597,7 +648,7 @@
                                 Style="{StaticResource ThinSlider}"/>
                         <TextBlock Grid.Column="2"
                                    Text="{Binding InputMasterVolume, StringFormat='{}{0}%'}"
-                                   Foreground="#C0BFDB" FontSize="12"
+                                   Foreground="{StaticResource ColorTextSecondary}" FontSize="12"
                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
                     </Grid>
                 </Border>
@@ -646,20 +697,20 @@
                     <StackPanel>
                         <!-- Empty state -->
                         <TextBlock Text="No unused devices"
-                                   Foreground="#555580" FontSize="13"
+                                   Foreground="{StaticResource ColorSliderThumb}" FontSize="13"
                                    HorizontalAlignment="Center" Margin="0,20,0,0"
                                    Visibility="{Binding HasNoUnusedDevices, Converter={StaticResource BoolToVisibility}}"/>
 
                         <!-- Unused output devices section -->
                         <StackPanel Visibility="{Binding UnusedOutputCount, Converter={StaticResource CountToVisibility}}">
                             <TextBlock Text="OUTPUT DEVICES"
-                                       Foreground="#6C63FF" FontSize="10" FontWeight="SemiBold"
+                                       Foreground="{StaticResource ColorAccent}" FontSize="10" FontWeight="SemiBold"
                                        Margin="4,0,0,6"/>
                             <ItemsControl ItemsSource="{Binding UnusedOutputDevices}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Margin="0,0,0,6" CornerRadius="10" Padding="12,10"
-                                            Background="#25253A" BorderThickness="1" BorderBrush="#333346"
+                                            Background="{StaticResource ColorCardBackground}" BorderThickness="{StaticResource BorderThin}" BorderBrush="{StaticResource ColorBorderSubtle}"
                                             Cursor="Hand" Tag="{Binding}"
                                             MouseLeftButtonDown="RestoreOutputDevice_Click"
                                             ToolTip="Restore device. Right click for additional information."
@@ -670,7 +721,7 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                           Foreground="#E0E0F0" FontSize="13"
+                                                           Foreground="{StaticResource ColorTextPrimary}" FontSize="13"
                                                            VerticalAlignment="Center"/>
                                                 <Button Grid.Column="1" Style="{StaticResource SecondaryButton}"
                                                     Width="68" Height="26" Padding="6,0"
@@ -678,7 +729,7 @@
                                                     Tag="{Binding}"
                                                     ToolTip="Restore device. Right click for additional information."
                                                     MouseRightButtonDown="Element_MouseRightButtonDown">
-                                                    <fa:IconBlock Icon="Undo" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#6C63FF" Width="14" Height="14" />
+                                                    <fa:IconBlock Icon="Undo" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource ColorAccent}" Width="14" Height="14" />
                                                 </Button>
                                             </Grid>
                                         </Border>
@@ -694,13 +745,13 @@
                         <!-- Unused input devices section -->
                         <StackPanel Visibility="{Binding UnusedInputCount, Converter={StaticResource CountToVisibility}}">
                             <TextBlock Text="INPUT DEVICES"
-                                       Foreground="#6C63FF" FontSize="10" FontWeight="SemiBold"
+                                       Foreground="{StaticResource ColorAccent}" FontSize="10" FontWeight="SemiBold"
                                        Margin="4,0,0,6"/>
                             <ItemsControl ItemsSource="{Binding UnusedInputDevices}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Margin="0,0,0,6" CornerRadius="10" Padding="12,10"
-                                            Background="#25253A" BorderThickness="1" BorderBrush="#333346"
+                                            Background="{StaticResource ColorCardBackground}" BorderThickness="{StaticResource BorderThin}" BorderBrush="{StaticResource ColorBorderSubtle}"
                                             Cursor="Hand" Tag="{Binding}"
                                             MouseLeftButtonDown="RestoreInputDevice_Click"
                                             ToolTip="Restore device. Right click for additional information."
@@ -711,7 +762,7 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                           Foreground="#E0E0F0" FontSize="13"
+                                                           Foreground="{StaticResource ColorTextPrimary}" FontSize="13"
                                                            VerticalAlignment="Center"/>
                                                 <Button Grid.Column="1" Style="{StaticResource SecondaryButton}"
                                                     Width="68" Height="26" Padding="6,0"
@@ -719,7 +770,7 @@
                                                     Tag="{Binding}"
                                                     ToolTip="Restore device. Right click for additional information."
                                                     MouseRightButtonDown="Element_MouseRightButtonDown">
-                                                    <fa:IconBlock Icon="Undo" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#6C63FF" Width="14" Height="14" />
+                                                    <fa:IconBlock Icon="Undo" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource ColorAccent}" Width="14" Height="14" />
                                                 </Button>
                                             </Grid>
                                         </Border>
@@ -735,60 +786,60 @@
             <Grid Grid.Row="1" Visibility="{Binding IsInfoTabSelected, Converter={StaticResource BoolToVisibility}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14,10,14,10">
                     <StackPanel>
-                            <TextBlock Text="Overview" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <TextBlock Text="SoundSwitch Lite is a minimal tray-first utility for quickly switching audio devices and assigning global hotkeys." Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                            <TextBlock Text="Overview" Style="{StaticResource InfoHeadlineText}" Margin="0,0,0,8"/>
+                            <TextBlock Text="SoundSwitch Lite is a minimal tray-first utility for quickly switching audio devices and assigning global hotkeys." Style="{StaticResource InfoBodyText}" Margin="0,0,0,12"/>
 
-                            <TextBlock Text="Features" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,6,0,4"/>
-                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">
+                            <TextBlock Text="Features" Style="{StaticResource InfoHeadlineText}" Margin="0,6,0,4"/>
+                            <TextBlock Style="{StaticResource InfoBodyText}" Margin="0,0,0,12">
                                 • System tray operation and single-instance behavior
                             </TextBlock>
-                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">
+                            <TextBlock Style="{StaticResource InfoBodyText}" Margin="0,0,0,12">
                                 • Assign global hotkeys to device slots for one-press switching
                             </TextBlock>
-                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">
+                            <TextBlock Style="{StaticResource InfoBodyText}" Margin="0,0,0,12">
                                 • Per-slot base-volume override and master volume control
                             </TextBlock>
 
-                            <Separator Margin="0,8,0,8"/>
+                            <Separator Style="{StaticResource InfoSectionSeparator}" Margin="0,8,0,8"/>
 
-                            <TextBlock Text="Quick Start" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,6">1. Click &quot;+ Add Device&quot; to create a slot.</TextBlock>
-                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,6">2. Use the dropdown to select a system device for the slot. Click the card to activate that device.</TextBlock>
-                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,6">3. Click the hotkey field and press the desired key combination to assign a global shortcut.</TextBlock>
-                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">4. To remove a slot: right-click an inactive card to arm it for deletion; right-click again to confirm removal.</TextBlock>
+                            <TextBlock Text="Quick Start" Style="{StaticResource InfoHeadlineText}" Margin="0,0,0,8"/>
+                            <TextBlock Style="{StaticResource InfoBodyText}" Margin="0,0,0,6">1. Click &quot;+ Add Device&quot; to create a slot.</TextBlock>
+                            <TextBlock Style="{StaticResource InfoBodyText}" Margin="0,0,0,6">2. Use the dropdown to select a system device for the slot. Click the card to activate that device.</TextBlock>
+                            <TextBlock Style="{StaticResource InfoBodyText}" Margin="0,0,0,6">3. Click the hotkey field and press the desired key combination to assign a global shortcut.</TextBlock>
+                            <TextBlock Style="{StaticResource InfoBodyText}" Margin="0,0,0,12">4. To remove a slot: right-click an inactive card to arm it for deletion; right-click again to confirm removal.</TextBlock>
 
-                            <Separator Margin="0,8,0,8"/>
+                            <Separator Style="{StaticResource InfoSectionSeparator}" Margin="0,8,0,8"/>
 
-                            <TextBlock Text="Hotkeys" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">Hotkeys are global. Assign with the hotkey field; clear by right-clicking the field. Careful to avoid conflicting system shortcuts.</TextBlock>
+                            <TextBlock Text="Hotkeys" Style="{StaticResource InfoHeadlineText}" Margin="0,0,0,8"/>
+                            <TextBlock Style="{StaticResource InfoBodyText}" Margin="0,0,0,12">Hotkeys are global. Assign with the hotkey field; clear by right-clicking the field. Careful to avoid conflicting system shortcuts.</TextBlock>
 
-                            <TextBlock Text="Settings &amp; Persistence" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,6">All mappings and hotkeys are stored in your AppData folder:</TextBlock>
-                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">%AppData%\SoundSwitchLite\settings.json</TextBlock>
+                            <TextBlock Text="Settings &amp; Persistence" Style="{StaticResource InfoHeadlineText}" Margin="0,0,0,8"/>
+                            <TextBlock Style="{StaticResource InfoBodyText}" Margin="0,0,0,6">All mappings and hotkeys are stored in your AppData folder:</TextBlock>
+                            <TextBlock Style="{StaticResource InfoBodyText}" Margin="0,0,0,12">%AppData%\SoundSwitchLite\settings.json</TextBlock>
 
-                            <Separator Margin="0,8,0,8"/>
+                            <Separator Style="{StaticResource InfoSectionSeparator}" Margin="0,8,0,8"/>
 
-                            <TextBlock Text="Unused Devices" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">Devices you send to &quot;Unused&quot; are removed from the slot list and can be restored from the Unused tab.</TextBlock>
+                            <TextBlock Text="Unused Devices" Style="{StaticResource InfoHeadlineText}" Margin="0,0,0,8"/>
+                            <TextBlock Style="{StaticResource InfoBodyText}" Margin="0,0,0,12">Devices you send to &quot;Unused&quot; are removed from the slot list and can be restored from the Unused tab.</TextBlock>
 
-                            <Separator Margin="0,8,0,8"/>
+                            <Separator Style="{StaticResource InfoSectionSeparator}" Margin="0,8,0,8"/>
 
-                            <TextBlock Text="Troubleshooting" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,6">• If the app cannot change devices, ensure you have appropriate audio drivers and that another application is not exclusively using the device.</TextBlock>
-                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,6">• You may see package compatibility warnings for the AudioSwitcher libraries; the app attempts to initialize audio safely and will continue running with degraded functionality if required.</TextBlock>
-                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap" Margin="0,0,0,12">• If XAML-generated files are missing after editing, try cleaning the project (`dotnet clean`) and rebuilding to regenerate BAML/.g.cs artifacts.</TextBlock>
+                            <TextBlock Text="Troubleshooting" Style="{StaticResource InfoHeadlineText}" Margin="0,0,0,8"/>
+                            <TextBlock Style="{StaticResource InfoBodyText}" Margin="0,0,0,6">• If the app cannot change devices, ensure you have appropriate audio drivers and that another application is not exclusively using the device.</TextBlock>
+                            <TextBlock Style="{StaticResource InfoBodyText}" Margin="0,0,0,6">• You may see package compatibility warnings for the AudioSwitcher libraries; the app attempts to initialize audio safely and will continue running with degraded functionality if required.</TextBlock>
+                            <TextBlock Style="{StaticResource InfoBodyText}" Margin="0,0,0,12">• If XAML-generated files are missing after editing, try cleaning the project (`dotnet clean`) and rebuilding to regenerate BAML/.g.cs artifacts.</TextBlock>
 
-                            <Separator Margin="0,8,0,8"/>
+                            <Separator Style="{StaticResource InfoSectionSeparator}" Margin="0,8,0,8"/>
 
-                            <TextBlock Text="License" Foreground="#6C63FF" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <TextBlock Foreground="#C0BFDB" TextWrapping="Wrap">SoundSwitch Lite is provided under the MIT License. See the repository README for details.</TextBlock>
+                            <TextBlock Text="License" Style="{StaticResource InfoHeadlineText}" Margin="0,0,0,8"/>
+                            <TextBlock Style="{StaticResource InfoBodyText}">SoundSwitch Lite is provided under the MIT License. See the repository README for details.</TextBlock>
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
 
             <!-- ── Tab bar ───────────────────────────────────────── -->
-                <Border Grid.Row="2" Background="#16162A" CornerRadius="0,0,12,12"
-                    BorderBrush="#2D2D40" BorderThickness="0,1,0,0">
+                <Border Grid.Row="2" Background="{StaticResource ColorTitlebarBackground}" CornerRadius="{StaticResource RadiusTabbar}"
+                    BorderBrush="{StaticResource ColorWindowBorder}" BorderThickness="{StaticResource BorderTabbar}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
