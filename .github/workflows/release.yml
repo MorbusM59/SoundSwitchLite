@@ -1,0 +1,101 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build_release:
+    runs-on: windows-latest
+    outputs:
+      app_version: ${{ steps.version.outputs.app_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Resolve app version
+        id: version
+        shell: pwsh
+        run: |
+          $version = (dotnet msbuild "SoundSwitchLite/SoundSwitchLite/SoundSwitchLite.csproj" -nologo -getProperty:Version).Trim()
+          "app_version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          Write-Host "Resolved version: $version"
+
+      - name: Restore
+        run: dotnet restore SoundSwitchLite/SoundSwitchLite.slnx
+
+      - name: Build
+        run: dotnet build SoundSwitchLite/SoundSwitchLite.slnx --configuration Release --no-restore -m:1
+
+      - name: Test
+        run: dotnet test Tests/SoundSwitchLite.Tests/SoundSwitchLite.Tests.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Publish app
+        shell: pwsh
+        run: |
+          dotnet publish "SoundSwitchLite/SoundSwitchLite/SoundSwitchLite.csproj" `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -o "publish"
+
+      - name: Upload publish artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-publish-win-x64-${{ steps.version.outputs.app_version }}
+          path: publish/**
+
+  build_installer:
+    runs-on: windows-latest
+    needs: build_release
+    env:
+      SOUNDSWITCHLITE_VERSION: ${{ needs.build_release.outputs.app_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download publish artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-publish-win-x64-${{ needs.build_release.outputs.app_version }}
+          path: SoundSwitchLite/installer/publish
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          & $iscc "SoundSwitchLite/installer/SoundSwitchLite.iss"
+
+      - name: Compute checksums
+        shell: pwsh
+        run: |
+          Get-FileHash SoundSwitchLite/installer/Output/*.exe -Algorithm SHA256 |
+            ForEach-Object { "{0}  {1}" -f $_.Hash.ToLowerInvariant(), [System.IO.Path]::GetFileName($_.Path) } |
+            Out-File -FilePath SoundSwitchLite/installer/Output/SHA256SUMS.txt -Encoding ascii
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ needs.build_release.outputs.app_version }}
+          path: |
+            SoundSwitchLite/installer/Output/*.exe
+            SoundSwitchLite/installer/Output/SHA256SUMS.txt
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            SoundSwitchLite/installer/Output/*.exe
+            SoundSwitchLite/installer/Output/SHA256SUMS.txt

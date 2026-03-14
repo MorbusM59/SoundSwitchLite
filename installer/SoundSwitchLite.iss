@@ -16,7 +16,10 @@
 ;   3. The resulting SoundSwitchLiteSetup.exe will be placed in installer\Output\.
 
 #define MyAppName      "SoundSwitch Lite"
-#define MyAppVersion   "1.0.0"
+#define MyAppVersion   GetEnv('SOUNDSWITCHLITE_VERSION')
+#if MyAppVersion == ""
+  #define MyAppVersion "1.0.0"
+#endif
 #define MyAppPublisher "SoundSwitch Lite"
 #define MyAppExeName   "SoundSwitchLite.exe"
 #define MyAppURL       "https://github.com/MorbusM59/SoundSwitchLite"
@@ -41,7 +44,7 @@ DisableDirPage=no
 DisableProgramGroupPage=yes
 ; Output settings
 OutputDir=Output
-OutputBaseFilename=SoundSwitchLiteSetup
+OutputBaseFilename=SoundSwitchLiteSetup-{#MyAppVersion}
 SetupIconFile=..\SoundSwitchLite\Assets\app.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -59,7 +62,7 @@ Name: "desktopicon";    Description: "{cm:CreateDesktopIcon}";    GroupDescripti
 Name: "startupentry";   Description: "Start {#MyAppName} when Windows starts"; GroupDescription: "Windows startup:"; Flags: unchecked
 
 [Files]
-Source: "{#PublishDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}";           Filename: "{app}\{#MyAppExeName}"
@@ -70,7 +73,7 @@ Name: "{autodesktop}\{#MyAppName}";     Filename: "{app}\{#MyAppExeName}"; Tasks
 ; Optional auto-start on Windows login (only when the user checked the task above)
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
   ValueType: string; ValueName: "{#MyAppName}"; \
-  ValueData: """{app}\{#MyAppExeName}""" --minimized; Flags: uninsdeletevalue; Tasks: startupentry
+  ValueData: """{app}\{#MyAppExeName}"" --minimized"; Flags: uninsdeletevalue; Tasks: startupentry
 
 [Run]
 ; Offer to launch the app after installation finishes

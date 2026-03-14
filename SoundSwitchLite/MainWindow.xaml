@@ -786,7 +786,7 @@
             </Grid>
 
             <!-- ── Tab bar ───────────────────────────────────────── -->
-                <Border Grid.Row="3" Background="#16162A" CornerRadius="0,0,12,12"
+                <Border Grid.Row="2" Background="#16162A" CornerRadius="0,0,12,12"
                     BorderBrush="#2D2D40" BorderThickness="0,1,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>

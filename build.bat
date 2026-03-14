@@ -49,6 +49,9 @@ echo.
 if /i "%1"=="installer" (
     echo [2/2] Compiling Inno Setup installer...
 
+    for /f "usebackq delims=" %%V in (`dotnet msbuild "%PROJECT%" -nologo -getProperty:Version`) do set "APP_VERSION=%%V"
+    if not "!APP_VERSION!"=="" set "SOUNDSWITCHLITE_VERSION=!APP_VERSION!"
+
     :: Try the default Inno Setup 6 install location
     set ISCC=
     if exist "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" (
@@ -76,7 +79,7 @@ if /i "%1"=="installer" (
     )
 
     echo.
-    echo Installer written to: %SCRIPT_DIR%installer\Output\SoundSwitchLiteSetup.exe
+    echo Installer written to: %SCRIPT_DIR%installer\Output\SoundSwitchLiteSetup-!SOUNDSWITCHLITE_VERSION!.exe
 ) else (
     echo [2/2] Skipped installer step.  Run "build.bat installer" to also build the installer.
 )

@@ -9,7 +9,7 @@ A super lightweight Windows 11 desktop app that lets you quickly switch audio ou
 - **Global Hotkeys** — Assign system-wide keyboard shortcuts to each audio device; works even when the app is hidden
 - **Persistent Settings** — All device assignments and hotkeys are saved to `%AppData%/SoundSwitchLite/settings.json`
 - **Multiple Devices** — Add as many device slots as you have audio output devices
-- **One-click Switching** — Click the play button in any device slot to immediately switch to that output
+- **One-click Switching** — Click anywhere on a device card to immediately switch to that device
 - **Single Instance** — Prevents duplicate launches
 
 ## Prerequisites
@@ -33,7 +33,7 @@ dotnet run --project SoundSwitchLite/SoundSwitchLite.csproj
 2. **Select a device** — Use the dropdown in the slot to pick an audio output device
 3. **Assign a hotkey** — Click the hotkey field (shows "Click to assign hotkey"), then press your desired key combination (e.g. `Ctrl+Alt+1`)
 4. **Clear a hotkey** — Right-click the hotkey field to remove the assigned shortcut
-5. **Switch device** — Click the ▶ button in any slot, or press the assigned global hotkey from anywhere
+5. **Switch device** — Click anywhere on the device card, or press the assigned global hotkey from anywhere
 6. **Tray behavior** — Closing the window hides it to the system tray; right-click the tray icon and select "Exit" to fully quit
 
 ## Settings

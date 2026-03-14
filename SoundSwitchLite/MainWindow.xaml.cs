@@ -183,21 +183,6 @@ public class MainWindowViewModel : INotifyPropertyChanged
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-    // Info panel state
-    private bool _infoPanelVisible;
-    private string _infoText = string.Empty;
-
-    public bool InfoPanelVisible
-    {
-        get => _infoPanelVisible;
-        set { _infoPanelVisible = value; OnPropertyChanged(); }
-    }
-
-    public string InfoText
-    {
-        get => _infoText;
-        set { _infoText = value; OnPropertyChanged(); }
-    }
 }
 
 public partial class MainWindow : Window
@@ -241,19 +226,6 @@ public partial class MainWindow : Window
 
         Loaded += OnLoaded;
         Closing += OnWindowClosing;
-    }
-
-    // Info panel moved to a dedicated tab — per-element info button removed.
-
-    // Hover is intentionally a no-op — show only a tooltip on hover.
-    private void Element_MouseEnter(object sender, MouseEventArgs e)
-    {
-        // no-op: tooltips provide the short hover guidance
-    }
-
-    private void Element_MouseLeave(object sender, MouseEventArgs e)
-    {
-        // no-op
     }
 
     private void Element_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
@@ -579,7 +551,6 @@ public partial class MainWindow : Window
         SaveSettings();
     }
 
-    // Volume controls and helpers omitted for brevity; implement the merged behavior
     private void VolumeDecrement_Click(object sender, RoutedEventArgs e)
     {
         _ = VolumeDecrement_ClickAsync(sender, e);
@@ -786,17 +757,6 @@ public partial class MainWindow : Window
         _baseAdjustAnchorSlot = null;
         _baseAdjustAnchorBase = 0;
         _baseAdjustAnchorWindowsVolume = 0;
-    }
-
-    private async Task ApplyBasePresetToActiveSlotAsync(DeviceSlotViewModel slot, bool force = false)
-    {
-        if (!force && !slot.IsActive) return;
-        if (slot.SelectedDevice == null) return;
-        int preset = slot.BaseVolume;
-        if (slot.IsInput)
-            await _audioService.SetCaptureVolumeAsync(slot.SelectedDevice.Id, preset);
-        else
-            await _audioService.SetVolumeAsync(slot.SelectedDevice.Id, preset);
     }
 
     private void VolumeSlider_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -1024,31 +984,6 @@ public partial class MainWindow : Window
         slot.HotkeyId = id;
     }
 
-    // Add/Remove slots
-    private void RemoveSlot_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot)
-        {
-            if (slot.IsActive) return; // avoid removing active slot
-                if (slot.HotkeyId >= 0) _hotkeyService.UnregisterHotkey(slot.HotkeyId);
-                if (_listeningSlot == slot) _listeningSlot = null;
-
-            if (slot.IsInput)
-            {
-                _viewModel.InputSlots.Remove(slot);
-                RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
-                UpdateInputAddButtonVisibility();
-            }
-            else
-            {
-                _viewModel.OutputSlots.Remove(slot);
-                RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
-                UpdateOutputAddButtonVisibility();
-            }
-            SaveSettings();
-        }
-    }
-
     private void AddOutputDevice_Click(object sender, RoutedEventArgs e)
     {
         var slot = CreateSlot(isInput: false);
@@ -1169,70 +1104,47 @@ public partial class MainWindow : Window
     private void RestoreOutputDevice_Click(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement fe && fe.Tag is AudioDevice device)
-        {
-            _viewModel.UnusedOutputDevices.Remove(device);
-            // If there's an empty slot, assign this device to it for convenience
-            var emptySlot = _viewModel.OutputSlots.FirstOrDefault(s => s.SelectedDevice == null);
-            if (emptySlot != null)
-            {
-                emptySlot.SelectedDevice = device;
-            }
-            RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
-            UpdateOutputAddButtonVisibility();
-            _viewModel.NotifyUnusedChanged();
-            SaveSettings();
-        }
+            RestoreOutputDeviceCore(device);
     }
 
     private void RestoreOutputDevice_ButtonClick(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement fe && fe.Tag is AudioDevice device)
-        {
-            _viewModel.UnusedOutputDevices.Remove(device);
-            var emptySlot = _viewModel.OutputSlots.FirstOrDefault(s => s.SelectedDevice == null);
-            if (emptySlot != null)
-            {
-                emptySlot.SelectedDevice = device;
-            }
-            RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
-            UpdateOutputAddButtonVisibility();
-            _viewModel.NotifyUnusedChanged();
-            SaveSettings();
-        }
+            RestoreOutputDeviceCore(device);
+    }
+
+    private void RestoreOutputDeviceCore(AudioDevice device)
+    {
+        _viewModel.UnusedOutputDevices.Remove(device);
+        var emptySlot = _viewModel.OutputSlots.FirstOrDefault(s => s.SelectedDevice == null);
+        if (emptySlot != null) emptySlot.SelectedDevice = device;
+        RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
+        UpdateOutputAddButtonVisibility();
+        _viewModel.NotifyUnusedChanged();
+        SaveSettings();
     }
 
     private void RestoreInputDevice_Click(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement fe && fe.Tag is AudioDevice device)
-        {
-            _viewModel.UnusedInputDevices.Remove(device);
-            var emptySlot = _viewModel.InputSlots.FirstOrDefault(s => s.SelectedDevice == null);
-            if (emptySlot != null)
-            {
-                emptySlot.SelectedDevice = device;
-            }
-            RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
-            UpdateInputAddButtonVisibility();
-            _viewModel.NotifyUnusedChanged();
-            SaveSettings();
-        }
+            RestoreInputDeviceCore(device);
     }
 
     private void RestoreInputDevice_ButtonClick(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement fe && fe.Tag is AudioDevice device)
-        {
-            _viewModel.UnusedInputDevices.Remove(device);
-            var emptySlot = _viewModel.InputSlots.FirstOrDefault(s => s.SelectedDevice == null);
-            if (emptySlot != null)
-            {
-                emptySlot.SelectedDevice = device;
-            }
-            RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
-            UpdateInputAddButtonVisibility();
-            _viewModel.NotifyUnusedChanged();
-            SaveSettings();
-        }
+            RestoreInputDeviceCore(device);
+    }
+
+    private void RestoreInputDeviceCore(AudioDevice device)
+    {
+        _viewModel.UnusedInputDevices.Remove(device);
+        var emptySlot = _viewModel.InputSlots.FirstOrDefault(s => s.SelectedDevice == null);
+        if (emptySlot != null) emptySlot.SelectedDevice = device;
+        RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
+        UpdateInputAddButtonVisibility();
+        _viewModel.NotifyUnusedChanged();
+        SaveSettings();
     }
 
     private void TabOutput_Click(object sender, RoutedEventArgs e) => _viewModel.SelectedTab = "Output";
