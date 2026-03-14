@@ -25,6 +25,8 @@
         <SolidColorBrush x:Key="ColorAccent" Color="#6C63FF" po:Freeze="False"/>
         <SolidColorBrush x:Key="ColorAccentHover" Color="#7D75FF" po:Freeze="False"/>
         <SolidColorBrush x:Key="ColorAccentPressed" Color="#5A52D5" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorTabActiveBackground" Color="#6C63FF" po:Freeze="False"/>
+        <SolidColorBrush x:Key="ColorTabActiveForeground" Color="#E0E0F0" po:Freeze="False"/>
         <SolidColorBrush x:Key="ColorAppBackground" Color="#1E1E2E" po:Freeze="False"/>
         <SolidColorBrush x:Key="ColorTitlebarBackground" Color="#16162A" po:Freeze="False"/>
         <SolidColorBrush x:Key="ColorWindowBorder" Color="#2D2D40" po:Freeze="False"/>
@@ -63,9 +65,9 @@
         <converters:BoolToBrushConverter x:Key="ActiveForegroundBrush"
             TrueBrush="{StaticResource ColorTextPrimary}" FalseBrush="{StaticResource ColorTextDim}"/>
         <converters:BoolToBrushConverter x:Key="TabActiveBrush"
-            TrueBrush="{StaticResource ColorAccent}" FalseBrush="Transparent"/>
+            TrueBrush="{StaticResource ColorTabActiveBackground}" FalseBrush="Transparent"/>
         <converters:BoolToBrushConverter x:Key="TabActiveFgBrush"
-            TrueBrush="{StaticResource ColorTextPrimary}" FalseBrush="{StaticResource ColorTextMuted}"/>
+            TrueBrush="{StaticResource ColorTabActiveForeground}" FalseBrush="{StaticResource ColorTextMuted}"/>
         <converters:CountToVisibilityConverter x:Key="CountToVisibility"/>
 
         <!-- Info tab typography tokens -->

@@ -181,6 +181,14 @@ public class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(HasNoUnusedDevices));
     }
 
+    public void NotifyTabVisualStateChanged()
+    {
+        OnPropertyChanged(nameof(IsOutputTabSelected));
+        OnPropertyChanged(nameof(IsInputTabSelected));
+        OnPropertyChanged(nameof(IsUnusedTabSelected));
+        OnPropertyChanged(nameof(IsInfoTabSelected));
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
@@ -1290,6 +1298,8 @@ public partial class MainWindow : Window
             SetBrushColor("ColorAccent", "#6C63FF");
             SetBrushColor("ColorAccentHover", "#7D75FF");
             SetBrushColor("ColorAccentPressed", "#5A52D5");
+            SetBrushColor("ColorTabActiveBackground", "#6C63FF");
+            SetBrushColor("ColorTabActiveForeground", "#E0E0F0");
             SetBrushColor("ColorAppBackground", "#1E1E2E");
             SetBrushColor("ColorTitlebarBackground", "#16162A");
             SetBrushColor("ColorWindowBorder", "#2D2D40");
@@ -1315,6 +1325,8 @@ public partial class MainWindow : Window
             SetBrushColor("ColorAccent", "#2F55D4");
             SetBrushColor("ColorAccentHover", "#3C67F0");
             SetBrushColor("ColorAccentPressed", "#2848B3");
+            SetBrushColor("ColorTabActiveBackground", "#C7D9FF");
+            SetBrushColor("ColorTabActiveForeground", "#1F2A3D");
             SetBrushColor("ColorAppBackground", "#EEF1F7");
             SetBrushColor("ColorTitlebarBackground", "#E3E8F2");
             SetBrushColor("ColorWindowBorder", "#C3CDD9");
@@ -1337,6 +1349,7 @@ public partial class MainWindow : Window
         }
 
         UpdateThemeConverters();
+        _viewModel.NotifyTabVisualStateChanged();
     }
 
     private bool IsDarkThemeEffective(ThemeMode mode)
@@ -1396,13 +1409,13 @@ public partial class MainWindow : Window
 
         if (TryFindResource("TabActiveBrush") is SoundSwitchLite.Converters.BoolToBrushConverter tabBg)
         {
-            tabBg.TrueBrush = GetThemeBrush("ColorAccent");
+            tabBg.TrueBrush = GetThemeBrush("ColorTabActiveBackground");
             tabBg.FalseBrush = Brushes.Transparent;
         }
 
         if (TryFindResource("TabActiveFgBrush") is SoundSwitchLite.Converters.BoolToBrushConverter tabFg)
         {
-            tabFg.TrueBrush = GetThemeBrush("ColorTextPrimary");
+            tabFg.TrueBrush = GetThemeBrush("ColorTabActiveForeground");
             tabFg.FalseBrush = GetThemeBrush("ColorTextMuted");
         }
     }
