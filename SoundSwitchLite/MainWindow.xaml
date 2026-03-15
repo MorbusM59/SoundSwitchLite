@@ -97,7 +97,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6" Width="28" Height="28">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -542,44 +542,29 @@
 
                     <Button x:Name="ThemeToggleButton"
                             Style="{StaticResource TitlebarGlyphButton}"
-                            HorizontalAlignment="Right" Margin="0,0,72,0"
+                            HorizontalAlignment="Right" Margin="0,0,80,0"
                             Click="ThemeToggleButton_Click"
                             ToolTip="Theme: System">
-                        <fa:IconBlock x:Name="ThemeToggleIcon" Icon="Desktop" Width="12" Height="12"
+                        <fa:IconBlock x:Name="ThemeToggleIcon" Icon="Desktop" Width="16" Height="16"
                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                     </Button>
 
                     <Button x:Name="MinimizeButton"
                             Style="{StaticResource TitlebarGlyphButton}"
-                            HorizontalAlignment="Right" Margin="0,0,40,0"
+                            HorizontalAlignment="Right" Margin="0,0,44,0"
                             Click="MinimizeButton_Click"
                             ToolTip="Minimize">
-                        <fa:IconBlock Icon="Minus" Width="12" Height="12"
+                        <fa:IconBlock Icon="WindowMinimize" Width="16" Height="16"
                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                     </Button>
 
                     <Button x:Name="CloseButton"
+                            Style="{StaticResource TitlebarGlyphButton}"
                             HorizontalAlignment="Right" Margin="0,0,8,0"
-                            Click="CloseButton_Click">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource TitlebarGlyphButton}">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6" Width="28" Height="28">
-                                                <fa:IconBlock Icon="Times" HorizontalAlignment="Center" VerticalAlignment="Center" Width="12" Height="12" Foreground="{TemplateBinding Foreground}"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ColorCloseHover}"/>
-                                                    <Setter Property="Foreground" Value="White"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </Button.Style>
+                            Click="CloseButton_Click"
+                            ToolTip="Run in Background">
+                        <fa:IconBlock Icon="Times" Width="16" Height="16"
+                                      Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                     </Button>
                 </Grid>
             </Border>
