@@ -25,6 +25,9 @@ public class DeviceSlotViewModel : INotifyPropertyChanged
 {
     private bool _isActive;
     private bool _isUnavailable;
+    private bool _isInUnused;
+    private bool _isDragging;
+    private bool _isDropTarget;
     private AudioDevice? _selectedDevice;
     private bool _isListening;
     private string _hotkeyDisplay = "Click to assign hotkey";
@@ -53,6 +56,24 @@ public class DeviceSlotViewModel : INotifyPropertyChanged
     {
         get => _isUnavailable;
         set { _isUnavailable = value; OnPropertyChanged(); }
+    }
+
+    public bool IsInUnused
+    {
+        get => _isInUnused;
+        set { _isInUnused = value; OnPropertyChanged(); }
+    }
+
+    public bool IsDragging
+    {
+        get => _isDragging;
+        set { _isDragging = value; OnPropertyChanged(); }
+    }
+
+    public bool IsDropTarget
+    {
+        get => _isDropTarget;
+        set { _isDropTarget = value; OnPropertyChanged(); }
     }
 
     public AudioDevice? SelectedDevice
@@ -243,6 +264,8 @@ public partial class MainWindow : Window
     private double _lastNormalWindowHeight = 400;
     private readonly SemaphoreSlim _windowsDeviceOperationLock = new(1, 1);
     private IDisposable? _deviceChangedSubscription;
+    private Point _dragStartPoint;
+    private DeviceSlotViewModel? _dragSourceSlot;
 
     // Info auto-hide timer (removed — info moved to separate tab)
 
@@ -571,6 +594,33 @@ public partial class MainWindow : Window
         }
     }
 
+    private void EnsureAutoSlotsForAvailableDevices(
+        ObservableCollection<DeviceSlotViewModel> slots,
+        List<AudioDevice> allDevices,
+        ObservableCollection<AudioDevice> unused,
+        bool isInput)
+    {
+        foreach (var empty in slots.Where(s => s.SelectedDevice == null).ToList())
+            slots.Remove(empty);
+
+        var unusedIds = unused.Select(d => d.Id).ToHashSet();
+        var existingIds = slots
+            .Where(s => s.SelectedDevice != null)
+            .Select(s => s.SelectedDevice!.Id)
+            .ToHashSet();
+
+        foreach (var device in allDevices)
+        {
+            if (unusedIds.Contains(device.Id) || existingIds.Contains(device.Id))
+                continue;
+
+            var slot = CreateSlot(isInput);
+            slot.SelectedDevice = device;
+            slots.Add(slot);
+            existingIds.Add(device.Id);
+        }
+    }
+
     private void RefreshSlotDevices(IEnumerable<DeviceSlotViewModel> slots, List<AudioDevice> allDevices, ObservableCollection<AudioDevice> unused)
     {
         _isRefreshingDevices = true;
@@ -628,12 +678,12 @@ public partial class MainWindow : Window
 
             foreach (var s in _viewModel.OutputSlots)
             {
-                s.IsActive = s.SelectedDevice?.Id == defaultPlayback;
+                s.IsActive = !s.IsInUnused && s.SelectedDevice?.Id == defaultPlayback;
             }
 
             foreach (var s in _viewModel.InputSlots)
             {
-                s.IsActive = s.SelectedDevice?.Id == defaultCapture;
+                s.IsActive = !s.IsInUnused && s.SelectedDevice?.Id == defaultCapture;
             }
         }
         catch (Exception ex)
@@ -692,6 +742,7 @@ public partial class MainWindow : Window
     private async Task ActivateSlotDeviceAsync(DeviceSlotViewModel slot)
     {
         if (slot.SelectedDevice == null) return;
+        if (slot.IsInUnused) return;
         if (slot.IsUnavailable)
         {
             ShowBalloon($"Device unavailable: {slot.SelectedDevice.Name}");
@@ -1233,42 +1284,27 @@ public partial class MainWindow : Window
                 }
                 else
                 {
-                    // perform deletion similar to RemoveSlot_Click
-                    if (slot.HotkeyId >= 0) _hotkeyService.UnregisterHotkey(slot.HotkeyId);
-                    if (_listeningSlot == slot) _listeningSlot = null;
-
-                    // Purge from "Unused" pools by id to avoid stale exclusions when re-adding.
-                    var removedId = slot.SelectedDevice?.Id;
-
+                    // Double right-click sends inactive card to Unused.
                     if (slot.IsInput)
                     {
-                        if (!string.IsNullOrEmpty(removedId))
-                        {
-                            var stale = _viewModel.UnusedInputDevices.FirstOrDefault(d => d.Id == removedId);
-                            if (stale != null) _viewModel.UnusedInputDevices.Remove(stale);
-                        }
+                        if (slot.SelectedDevice != null && !_viewModel.UnusedInputDevices.Any(d => d.Id == slot.SelectedDevice.Id))
+                            _viewModel.UnusedInputDevices.Add(slot.SelectedDevice);
 
-                        _viewModel.InputSlots.Remove(slot);
+                        slot.IsInUnused = true;
                         RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
                         UpdateInputAddButtonVisibility();
                     }
                     else
                     {
-                        if (!string.IsNullOrEmpty(removedId))
-                        {
-                            var stale = _viewModel.UnusedOutputDevices.FirstOrDefault(d => d.Id == removedId);
-                            if (stale != null) _viewModel.UnusedOutputDevices.Remove(stale);
-                        }
+                        if (slot.SelectedDevice != null && !_viewModel.UnusedOutputDevices.Any(d => d.Id == slot.SelectedDevice.Id))
+                            _viewModel.UnusedOutputDevices.Add(slot.SelectedDevice);
 
-                        _viewModel.OutputSlots.Remove(slot);
+                        slot.IsInUnused = true;
                         RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
                         UpdateOutputAddButtonVisibility();
                     }
 
                     _viewModel.NotifyUnusedChanged();
-
-                    // Re-sync from system so newly freed devices immediately show as addable.
-                    _ = HandleDeviceChangedAsync();
                     SaveSettings();
                 }
                 e.Handled = true;
@@ -1335,8 +1371,15 @@ public partial class MainWindow : Window
     private void RestoreOutputDeviceCore(AudioDevice device)
     {
         _viewModel.UnusedOutputDevices.Remove(device);
-        var emptySlot = _viewModel.OutputSlots.FirstOrDefault(s => s.SelectedDevice == null);
-        if (emptySlot != null) emptySlot.SelectedDevice = device;
+        var existing = _viewModel.OutputSlots.FirstOrDefault(s => s.SelectedDevice?.Id == device.Id);
+        if (existing != null)
+            existing.IsInUnused = false;
+        else
+        {
+            var slot = CreateSlot(isInput: false);
+            slot.SelectedDevice = device;
+            _viewModel.OutputSlots.Add(slot);
+        }
         RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
         UpdateOutputAddButtonVisibility();
         _viewModel.NotifyUnusedChanged();
@@ -1351,12 +1394,131 @@ public partial class MainWindow : Window
     private void RestoreInputDeviceCore(AudioDevice device)
     {
         _viewModel.UnusedInputDevices.Remove(device);
-        var emptySlot = _viewModel.InputSlots.FirstOrDefault(s => s.SelectedDevice == null);
-        if (emptySlot != null) emptySlot.SelectedDevice = device;
+        var existing = _viewModel.InputSlots.FirstOrDefault(s => s.SelectedDevice?.Id == device.Id);
+        if (existing != null)
+            existing.IsInUnused = false;
+        else
+        {
+            var slot = CreateSlot(isInput: true);
+            slot.SelectedDevice = device;
+            _viewModel.InputSlots.Add(slot);
+        }
         RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
         UpdateInputAddButtonVisibility();
         _viewModel.NotifyUnusedChanged();
         SaveSettings();
+    }
+
+    private void DragHandle_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is DeviceSlotViewModel slot)
+        {
+            _dragSourceSlot = slot;
+            _dragStartPoint = e.GetPosition(this);
+            e.Handled = true;
+        }
+    }
+
+    private void DragHandle_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (_dragSourceSlot == null || e.LeftButton != MouseButtonState.Pressed)
+            return;
+
+        var pos = e.GetPosition(this);
+        if (Math.Abs(pos.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(pos.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
+            return;
+
+        var slot = _dragSourceSlot;
+        _dragSourceSlot = null;
+        try
+        {
+            slot.IsDragging = true;
+            DragDrop.DoDragDrop((DependencyObject)sender, slot, DragDropEffects.Move);
+        }
+        finally
+        {
+            slot.IsDragging = false;
+            ClearDropTargets();
+        }
+    }
+
+    private void ClearDropTargets()
+    {
+        foreach (var slot in _viewModel.OutputSlots)
+            slot.IsDropTarget = false;
+
+        foreach (var slot in _viewModel.InputSlots)
+            slot.IsDropTarget = false;
+    }
+
+    private void Card_DragOver(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(typeof(DeviceSlotViewModel)) ||
+            sender is not FrameworkElement fe ||
+            fe.DataContext is not DeviceSlotViewModel target)
+        {
+            e.Effects = DragDropEffects.None;
+            ClearDropTargets();
+            e.Handled = true;
+            return;
+        }
+
+        var source = (DeviceSlotViewModel)e.Data.GetData(typeof(DeviceSlotViewModel));
+        bool sameDomain = source.IsInput == target.IsInput;
+        e.Effects = sameDomain ? DragDropEffects.Move : DragDropEffects.None;
+
+        if (sameDomain)
+        {
+            var slots = source.IsInput ? _viewModel.InputSlots : _viewModel.OutputSlots;
+            foreach (var slot in slots)
+                slot.IsDropTarget = ReferenceEquals(slot, target);
+        }
+        else
+        {
+            ClearDropTargets();
+        }
+
+        e.Handled = true;
+    }
+
+    private void Card_DragLeave(object sender, DragEventArgs e)
+    {
+        // Intentionally do not clear here; DragLeave fires frequently while moving
+        // across nested child elements and causes visible border flicker.
+        // Targets are updated in DragOver and cleared on Drop / drag end.
+        e.Handled = true;
+    }
+
+    private void Card_Drop(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(typeof(DeviceSlotViewModel)) ||
+            sender is not FrameworkElement fe ||
+            fe.DataContext is not DeviceSlotViewModel target)
+        {
+            ClearDropTargets();
+            return;
+        }
+
+        var source = (DeviceSlotViewModel)e.Data.GetData(typeof(DeviceSlotViewModel));
+        if (ReferenceEquals(source, target) || source.IsInput != target.IsInput)
+        {
+            ClearDropTargets();
+            return;
+        }
+
+        var slots = source.IsInput ? _viewModel.InputSlots : _viewModel.OutputSlots;
+        int from = slots.IndexOf(source);
+        int to = slots.IndexOf(target);
+        if (from >= 0 && to >= 0 && from != to)
+        {
+            slots.Move(from, to);
+            SaveSettings();
+        }
+
+        ClearDropTargets();
+
+        e.Handled = true;
     }
     
 
@@ -1622,6 +1784,9 @@ public partial class MainWindow : Window
             // Refresh full device lists
             _allOutputDevices = (await _audioService.GetPlaybackDevicesAsync()).ToList();
             _allInputDevices = (await _audioService.GetCaptureDevicesAsync()).ToList();
+
+            EnsureAutoSlotsForAvailableDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices, isInput: false);
+            EnsureAutoSlotsForAvailableDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices, isInput: true);
 
             // Update dropdowns and add-button visibility
             RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);

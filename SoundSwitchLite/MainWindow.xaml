@@ -6,7 +6,7 @@
         xmlns:converters="clr-namespace:SoundSwitchLite.Converters"
         xmlns:fa="clr-namespace:FontAwesome.Sharp;assembly=FontAwesome.Sharp"
         Title="SoundSwitch Lite"
-        MinWidth="556" MinHeight="281"
+        MinWidth="606" MinHeight="281"
         Width="556" Height="400" SizeToContent="Manual" MaxHeight="800"
         Background="Transparent"
         WindowStyle="None"
@@ -461,6 +461,10 @@
                     Background="{DynamicResource ColorCardBackground}" BorderThickness="{StaticResource BorderCard}"
                     MouseLeftButtonDown="Card_MouseLeftButtonDown"
                     MouseRightButtonDown="Card_MouseRightButtonDown"
+                    AllowDrop="True"
+                    DragOver="Card_DragOver"
+                    DragLeave="Card_DragLeave"
+                    Drop="Card_Drop"
                     Cursor="Hand">
                 <Border.Style>
                     <Style TargetType="Border">
@@ -468,6 +472,16 @@
                         <Setter Property="Background" Value="{DynamicResource ColorCardBackground}"/>
                         <Setter Property="Opacity" Value="1"/>
                         <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsInUnused}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsDragging}" Value="True">
+                                <Setter Property="Opacity" Value="0.35"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsDropTarget}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource ColorAccent}"/>
+                                <Setter Property="BorderThickness" Value="2"/>
+                            </DataTrigger>
                             <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
                                 <Setter Property="Opacity" Value="0.55"/>
                             </DataTrigger>
@@ -481,21 +495,21 @@
                 </Border.Style>
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" MinWidth="170"/>
+                        <ColumnDefinition Width="*" MinWidth="220"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*" MinWidth="120"/>
+                        <ColumnDefinition Width="56"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Device selector -->
-                    <ComboBox Grid.Column="0" Margin="0,0,20,0"
-                              Style="{StaticResource DarkComboBox}"
-                              ItemsSource="{Binding AvailableDevices}"
-                              SelectedItem="{Binding SelectedDevice, Mode=TwoWay}"
-                              DisplayMemberPath="Name"
-                              SelectionChanged="DeviceComboBox_SelectionChanged"
-                              Tag="{Binding}"
-                              ToolTip="Select device. Right click for additional information."
-                              MouseRightButtonDown="Element_MouseRightButtonDown"/>
+                    <!-- Device name -->
+                    <StackPanel Grid.Column="0" Margin="0,0,20,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding SelectedDevice.Name}"
+                                   Foreground="{DynamicResource ColorTextPrimary}" FontSize="13" FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="Unavailable"
+                                   Foreground="{DynamicResource ColorTextMuted}" FontSize="11"
+                                   Visibility="{Binding IsUnavailable, Converter={StaticResource BoolToVisibility}}"/>
+                    </StackPanel>
 
                     <!-- Inline base volume controls -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,20,0">
@@ -530,7 +544,7 @@
                     </StackPanel>
 
                     <!-- Hotkey field -->
-                        <Border Grid.Column="2" Height="34" CornerRadius="{StaticResource RadiusControl}" Margin="0"
+                        <Border Grid.Column="2" Height="34" CornerRadius="{StaticResource RadiusControl}" Margin="0,0,12,0"
                             Cursor="Hand"
                             MouseLeftButtonDown="HotkeyField_MouseLeftButtonDown"
                             MouseRightButtonDown="HotkeyField_MouseRightButtonDown"
@@ -555,6 +569,19 @@
                                    TextAlignment="Center" TextWrapping="NoWrap"
                                    Margin="8,0"
                                    TextTrimming="CharacterEllipsis"/>
+                    </Border>
+
+                    <!-- Drag handle -->
+                    <Border Grid.Column="3"
+                            VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                            Background="Transparent"
+                            Tag="{Binding}"
+                            Cursor="SizeAll"
+                            PreviewMouseLeftButtonDown="DragHandle_PreviewMouseLeftButtonDown"
+                            MouseMove="DragHandle_MouseMove"
+                            ToolTip="Drag to reorder">
+                        <TextBlock Text="⋮⋮" Foreground="{DynamicResource ColorTextMuted}" FontSize="12"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                 </Grid>
             </Border>
@@ -614,8 +641,7 @@
                   Visibility="{Binding IsOutputTabSelected, Converter={StaticResource BoolToVisibility}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
                 <!-- Master volume card -->
@@ -652,35 +678,6 @@
                                   ItemTemplate="{StaticResource DeviceSlotTemplate}"/>
                 </ScrollViewer>
 
-                <!-- Footer buttons -->
-                <Border Grid.Row="2" Padding="14,6,14,10"
-                        Visibility="{Binding OutputFooterVisible, Converter={StaticResource BoolToVisibility}}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="10"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="+ Add Device"
-                            Style="{StaticResource PrimaryButton}"
-                            Padding="18,0"
-                            Click="AddOutputDevice_Click"
-                            Tag="Add a new output slot. Right click for additional information."
-                            ToolTip="Add a new output slot. Right click for additional information."
-                            MouseRightButtonDown="Element_MouseRightButtonDown"
-                            HorizontalAlignment="Stretch"
-                            Visibility="{Binding CanAddOutputDevice, Converter={StaticResource BoolToVisibility}}"/>
-                        <Button Grid.Column="2" Content="Send other devices to unused"
-                            Style="{StaticResource SecondaryButton}"
-                            Padding="14,0"
-                            Click="SendOutputToUnused_Click"
-                            Tag="Send other devices to unused. Right click for additional information."
-                            ToolTip="Send other devices to unused. Right click for additional information."
-                            MouseRightButtonDown="Element_MouseRightButtonDown"
-                            HorizontalAlignment="Stretch"
-                            Visibility="{Binding CanSendOutputDevices, Converter={StaticResource BoolToVisibility}}"/>
-                    </Grid>
-                </Border>
             </Grid>
 
             <!-- INPUT TAB -->
@@ -688,8 +685,7 @@
                   Visibility="{Binding IsInputTabSelected, Converter={StaticResource BoolToVisibility}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
                 <!-- Master volume card (same binding) -->
@@ -726,35 +722,6 @@
                                   ItemTemplate="{StaticResource DeviceSlotTemplate}"/>
                 </ScrollViewer>
 
-                <!-- Footer buttons (compact) -->
-                <Border Grid.Row="2" Padding="14,6,14,10"
-                        Visibility="{Binding InputFooterVisible, Converter={StaticResource BoolToVisibility}}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="10"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="+ Add Device"
-                            Style="{StaticResource PrimaryButton}"
-                            Padding="18,0"
-                            Click="AddInputDevice_Click"
-                            Tag="Add a new input slot. Right click for additional information."
-                            ToolTip="Add a new input slot. Right click for additional information."
-                            MouseRightButtonDown="Element_MouseRightButtonDown"
-                            HorizontalAlignment="Stretch"
-                            Visibility="{Binding CanAddInputDevice, Converter={StaticResource BoolToVisibility}}"/>
-                        <Button Grid.Column="2" Content="Send other devices to unused"
-                            Style="{StaticResource SecondaryButton}"
-                            Padding="14,0"
-                            Click="SendInputToUnused_Click"
-                            Tag="Send other devices to unused. Right click for additional information."
-                            ToolTip="Send other devices to unused. Right click for additional information."
-                            MouseRightButtonDown="Element_MouseRightButtonDown"
-                            HorizontalAlignment="Stretch"
-                            Visibility="{Binding CanSendInputDevices, Converter={StaticResource BoolToVisibility}}"/>
-                    </Grid>
-                </Border>
             </Grid>
 
             <!-- UNUSED DEVICES TAB -->
