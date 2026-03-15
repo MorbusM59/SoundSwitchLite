@@ -669,6 +669,43 @@ public partial class MainWindow : Window
         finally { _isRefreshingDevices = false; }
     }
 
+    private bool PurgeUnavailableUnusedDevices(
+        ObservableCollection<DeviceSlotViewModel> slots,
+        ObservableCollection<AudioDevice> unused,
+        List<AudioDevice> allDevices)
+    {
+        var removed = false;
+        var availableIds = allDevices.Select(d => d.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var stale in unused.Where(d => !availableIds.Contains(d.Id)).ToList())
+        {
+            unused.Remove(stale);
+            removed = true;
+        }
+
+        foreach (var slot in slots.Where(s => s.IsInUnused).ToList())
+        {
+            var id = slot.SelectedDevice?.Id;
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                slots.Remove(slot);
+                removed = true;
+                continue;
+            }
+
+            var isAvailable = availableIds.Contains(id);
+            if (!isAvailable)
+            {
+                var staleUnused = unused.FirstOrDefault(d => d.Id == id);
+                if (staleUnused != null) unused.Remove(staleUnused);
+                slots.Remove(slot);
+                removed = true;
+            }
+        }
+
+        return removed;
+    }
+
     private async Task RefreshActiveDevice()
     {
         try
@@ -1287,19 +1324,49 @@ public partial class MainWindow : Window
                     // Double right-click sends inactive card to Unused.
                     if (slot.IsInput)
                     {
-                        if (slot.SelectedDevice != null && !_viewModel.UnusedInputDevices.Any(d => d.Id == slot.SelectedDevice.Id))
-                            _viewModel.UnusedInputDevices.Add(slot.SelectedDevice);
+                        var selected = slot.SelectedDevice;
+                        var isAvailable = selected != null && _allInputDevices.Any(d => d.Id == selected.Id);
+                        if (selected != null && isAvailable)
+                        {
+                            if (!_viewModel.UnusedInputDevices.Any(d => d.Id == selected.Id))
+                                _viewModel.UnusedInputDevices.Add(selected);
+                            slot.IsInUnused = true;
+                        }
+                        else
+                        {
+                            if (selected != null)
+                            {
+                                var stale = _viewModel.UnusedInputDevices.FirstOrDefault(d => d.Id == selected.Id);
+                                if (stale != null) _viewModel.UnusedInputDevices.Remove(stale);
+                            }
+                            _viewModel.InputSlots.Remove(slot);
+                        }
 
-                        slot.IsInUnused = true;
+                        PurgeUnavailableUnusedDevices(_viewModel.InputSlots, _viewModel.UnusedInputDevices, _allInputDevices);
                         RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
                         UpdateInputAddButtonVisibility();
                     }
                     else
                     {
-                        if (slot.SelectedDevice != null && !_viewModel.UnusedOutputDevices.Any(d => d.Id == slot.SelectedDevice.Id))
-                            _viewModel.UnusedOutputDevices.Add(slot.SelectedDevice);
+                        var selected = slot.SelectedDevice;
+                        var isAvailable = selected != null && _allOutputDevices.Any(d => d.Id == selected.Id);
+                        if (selected != null && isAvailable)
+                        {
+                            if (!_viewModel.UnusedOutputDevices.Any(d => d.Id == selected.Id))
+                                _viewModel.UnusedOutputDevices.Add(selected);
+                            slot.IsInUnused = true;
+                        }
+                        else
+                        {
+                            if (selected != null)
+                            {
+                                var stale = _viewModel.UnusedOutputDevices.FirstOrDefault(d => d.Id == selected.Id);
+                                if (stale != null) _viewModel.UnusedOutputDevices.Remove(stale);
+                            }
+                            _viewModel.OutputSlots.Remove(slot);
+                        }
 
-                        slot.IsInUnused = true;
+                        PurgeUnavailableUnusedDevices(_viewModel.OutputSlots, _viewModel.UnusedOutputDevices, _allOutputDevices);
                         RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
                         UpdateOutputAddButtonVisibility();
                     }
@@ -1785,6 +1852,9 @@ public partial class MainWindow : Window
             _allOutputDevices = (await _audioService.GetPlaybackDevicesAsync()).ToList();
             _allInputDevices = (await _audioService.GetCaptureDevicesAsync()).ToList();
 
+            var pruned = PurgeUnavailableUnusedDevices(_viewModel.OutputSlots, _viewModel.UnusedOutputDevices, _allOutputDevices);
+            pruned |= PurgeUnavailableUnusedDevices(_viewModel.InputSlots, _viewModel.UnusedInputDevices, _allInputDevices);
+
             EnsureAutoSlotsForAvailableDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices, isInput: false);
             EnsureAutoSlotsForAvailableDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices, isInput: true);
 
@@ -1834,6 +1904,12 @@ public partial class MainWindow : Window
             // Always refresh active markers after a device-change event, even when
             // the default device already has a slot.
             await RefreshActiveDevice();
+
+            if (pruned)
+            {
+                _viewModel.NotifyUnusedChanged();
+                SaveSettings();
+            }
         }
         catch (Exception ex) { LogError(ex); }
     }

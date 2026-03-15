@@ -5,6 +5,11 @@ using System.Diagnostics;
 using System.ComponentModel;
 using System.Security.Principal;
 using System.Threading;
+using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
+using NAudioDataFlow = NAudio.CoreAudioApi.DataFlow;
+using NAudioDeviceState = NAudio.CoreAudioApi.DeviceState;
+using NAudioMMDeviceEnumerator = NAudio.CoreAudioApi.MMDeviceEnumerator;
 
 namespace SoundSwitchLite.Services;
 
@@ -18,6 +23,7 @@ public class AudioDeviceService : IDisposable
 {
     private readonly CoreAudioController? _controller;
     private static readonly SemaphoreSlim _pnpEnableLock = new(1, 1);
+    private static readonly ConcurrentDictionary<string, byte> _unknownNameLogged = new();
     private IEnumerable<dynamic>? _playbackCache;
     private DateTime _playbackCacheAt = DateTime.MinValue;
     private IEnumerable<dynamic>? _captureCache;
@@ -33,7 +39,7 @@ public class AudioDeviceService : IDisposable
     public async Task<IEnumerable<AudioDevice>> GetPlaybackDevicesAsync()
     {
         var devices = await GetPlaybackDeviceObjectsAsync();
-        return devices.Select(d => new AudioDevice { Id = d.Id.ToString(), Name = d.FullName });
+        return devices.Select(d => new AudioDevice { Id = d.Id.ToString(), Name = ResolveDeviceDisplayName(d) });
     }
 
     public async Task<string?> GetDefaultDeviceIdAsync()
@@ -61,7 +67,7 @@ public class AudioDeviceService : IDisposable
         {
             var devices = await GetPlaybackDeviceObjectsAsync();
             var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
-            return device?.FullName;
+            return device == null ? null : ResolveDeviceDisplayName(device);
         }
         catch { return null; }
     }
@@ -95,19 +101,157 @@ public class AudioDeviceService : IDisposable
     public async Task<IEnumerable<AudioDevice>> GetCaptureDevicesAsync()
     {
         var devices = await GetCaptureDeviceObjectsAsync();
-        return devices.Select(d => new AudioDevice { Id = d.Id.ToString(), Name = d.FullName });
+        var captureFriendlyNames = GetEndpointFriendlyNameMap(NAudioDataFlow.Capture);
+        return devices.Select(d =>
+        {
+            var id = d.Id.ToString();
+            captureFriendlyNames.TryGetValue(id, out string? endpointFriendlyName);
+            return new AudioDevice { Id = id, Name = ResolveDeviceDisplayName(d, endpointFriendlyName) };
+        });
     }
 
     public async Task<IEnumerable<AudioDevice>> GetDisabledPlaybackDevicesAsync()
     {
         var devices = await GetPlaybackDeviceObjectsByStateAsync(DeviceState.Disabled);
-        return devices.Select(d => new AudioDevice { Id = d.Id.ToString(), Name = d.FullName });
+        return devices.Select(d => new AudioDevice { Id = d.Id.ToString(), Name = ResolveDeviceDisplayName(d) });
     }
 
     public async Task<IEnumerable<AudioDevice>> GetDisabledCaptureDevicesAsync()
     {
         var devices = await GetCaptureDeviceObjectsByStateAsync(DeviceState.Disabled);
-        return devices.Select(d => new AudioDevice { Id = d.Id.ToString(), Name = d.FullName });
+        var captureFriendlyNames = GetEndpointFriendlyNameMap(NAudioDataFlow.Capture);
+        return devices.Select(d =>
+        {
+            var id = d.Id.ToString();
+            captureFriendlyNames.TryGetValue(id, out string? endpointFriendlyName);
+            return new AudioDevice { Id = id, Name = ResolveDeviceDisplayName(d, endpointFriendlyName) };
+        });
+    }
+
+    private static string ResolveDeviceDisplayName(dynamic device, string? endpointFriendlyName = null)
+    {
+        if (IsHumanReadableDeviceName(endpointFriendlyName))
+            return endpointFriendlyName!.Trim();
+
+        (string Property, string Value)[] candidates =
+        {
+            (Property: "FullName", Value: SafeString(device, "FullName")),
+            (Property: "FriendlyName", Value: SafeString(device, "FriendlyName")),
+            (Property: "DeviceFriendlyName", Value: SafeString(device, "DeviceFriendlyName")),
+            (Property: "InterfaceFriendlyName", Value: SafeString(device, "InterfaceFriendlyName")),
+            (Property: "DisplayName", Value: SafeString(device, "DisplayName")),
+            (Property: "Description", Value: SafeString(device, "Description")),
+            (Property: "ProductName", Value: SafeString(device, "ProductName")),
+            (Property: "Name", Value: SafeString(device, "Name"))
+        };
+
+        foreach (var candidate in candidates)
+        {
+            if (IsHumanReadableDeviceName(candidate.Value))
+                return candidate.Value;
+        }
+
+        LogUnknownDeviceName(device, candidates);
+
+        return "Unknown device";
+    }
+
+    private static IReadOnlyDictionary<string, string> GetEndpointFriendlyNameMap(NAudioDataFlow dataFlow)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            using var enumerator = new NAudioMMDeviceEnumerator();
+            var allStates = NAudioDeviceState.Active | NAudioDeviceState.Disabled | NAudioDeviceState.NotPresent | NAudioDeviceState.Unplugged;
+            var endpoints = enumerator.EnumerateAudioEndPoints(dataFlow, allStates);
+
+            foreach (var endpoint in endpoints)
+            {
+                try
+                {
+                    var id = endpoint.ID;
+                    var name = endpoint.FriendlyName;
+                    if (string.IsNullOrWhiteSpace(id) || !IsHumanReadableDeviceName(name))
+                        continue;
+
+                    map[id] = name.Trim();
+                }
+                catch
+                {
+                    // skip unreadable endpoint entries
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendDiag($"NAudio endpoint fallback unavailable: flow={dataFlow}, msg={ex.Message}");
+        }
+
+        return map;
+    }
+
+    private static void LogUnknownDeviceName(dynamic device, (string Property, string Value)[] candidates)
+    {
+        try
+        {
+            var id = SafeString(device, "Id");
+            var key = string.IsNullOrWhiteSpace(id) ? Guid.NewGuid().ToString("N") : id;
+            if (!_unknownNameLogged.TryAdd(key, 1))
+                return;
+
+            var attempted = string.Join("; ", candidates.Select(c => c.Property + "='" + c.Value + "'"));
+            var typeName = device?.GetType()?.FullName ?? "<unknown-type>";
+            AppendDiag($"Unknown device label fallback used: id={id}, type={typeName}, attempted={attempted}");
+        }
+        catch
+        {
+            // swallow diagnostics failures
+        }
+    }
+
+    private static bool IsHumanReadableDeviceName(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        var candidate = value.Trim();
+
+        if (string.Equals(candidate, "Unknown", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (LooksLikeEndpointId(candidate) || LooksLikeMacAddress(candidate))
+            return false;
+
+        return true;
+    }
+
+    private static bool LooksLikeEndpointId(string value)
+    {
+        return value.Contains("{0.0.", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("\\?\\", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("SWD\\", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("MMDEVAPI", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("BTHHFENUM", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool LooksLikeMacAddress(string value)
+    {
+        return Regex.IsMatch(value, "^([0-9A-Fa-f]{2}([-:])){5}[0-9A-Fa-f]{2}$")
+            || Regex.IsMatch(value, "^[0-9A-Fa-f]{12}$");
+    }
+
+    private static string SafeString(dynamic device, string propertyName)
+    {
+        try
+        {
+            var value = device.GetType().GetProperty(propertyName)?.GetValue(device)?.ToString();
+            return value ?? string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
     }
 
     public async Task<string?> GetDefaultCaptureDeviceIdAsync()
