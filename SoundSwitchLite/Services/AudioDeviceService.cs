@@ -1,5 +1,10 @@
 using AudioSwitcher.AudioApi;
 using AudioSwitcher.AudioApi.CoreAudio;
+using System.IO;
+using System.Diagnostics;
+using System.ComponentModel;
+using System.Security.Principal;
+using System.Threading;
 
 namespace SoundSwitchLite.Services;
 
@@ -12,6 +17,7 @@ public class AudioDevice
 public class AudioDeviceService : IDisposable
 {
     private readonly CoreAudioController? _controller;
+    private static readonly SemaphoreSlim _pnpEnableLock = new(1, 1);
     private IEnumerable<dynamic>? _playbackCache;
     private DateTime _playbackCacheAt = DateTime.MinValue;
     private IEnumerable<dynamic>? _captureCache;
@@ -154,13 +160,18 @@ public class AudioDeviceService : IDisposable
         try
         {
             if (_controller == null) return false;
+            AppendDiag($"DisableDeviceAsync start: id={deviceId}, isCapture={isCapture}");
 
             IEnumerable<dynamic> devices = isCapture
                 ? await _controller.GetCaptureDevicesAsync(DeviceState.Active)
                 : await _controller.GetPlaybackDevicesAsync(DeviceState.Active);
 
             var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
-            if (device == null) return false;
+            if (device == null)
+            {
+                AppendDiag($"DisableDeviceAsync device-not-found: id={deviceId}");
+                return false;
+            }
 
             var disabled = await TryDisableViaReflectionAsync(device);
             if (disabled)
@@ -171,10 +182,13 @@ public class AudioDeviceService : IDisposable
                     _playbackCache = null;
             }
 
+            AppendDiag($"DisableDeviceAsync result: id={deviceId}, success={disabled}");
+
             return disabled;
         }
-        catch
+        catch (Exception ex)
         {
+            AppendDiag($"DisableDeviceAsync exception: id={deviceId}, msg={ex}");
             return false;
         }
     }
@@ -184,15 +198,32 @@ public class AudioDeviceService : IDisposable
         try
         {
             if (_controller == null) return false;
+            AppendDiag($"EnableDeviceAsync start: id={deviceId}, isCapture={isCapture}");
 
             IEnumerable<dynamic> devices = isCapture
                 ? await _controller.GetCaptureDevicesAsync(DeviceState.Disabled)
                 : await _controller.GetPlaybackDevicesAsync(DeviceState.Disabled);
 
             var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
-            if (device == null) return false;
+            if (device == null)
+            {
+                AppendDiag($"EnableDeviceAsync device-not-found-in-disabled: id={deviceId}");
+                return false;
+            }
 
             var enabled = await TryEnableViaReflectionAsync(device);
+            if (!enabled)
+            {
+                // Fallback for runtime variants that expose no enable/state APIs.
+                string fullName = string.Empty;
+                try { fullName = device.FullName?.ToString() ?? string.Empty; } catch { }
+                if (!string.IsNullOrWhiteSpace(fullName))
+                {
+                    enabled = await TryEnableViaPnpDeviceAsync(fullName);
+                    AppendDiag($"EnableDeviceAsync PnP fallback result: id={deviceId}, name={fullName}, success={enabled}");
+                }
+            }
+
             if (enabled)
             {
                 if (isCapture)
@@ -201,10 +232,13 @@ public class AudioDeviceService : IDisposable
                     _playbackCache = null;
             }
 
+            AppendDiag($"EnableDeviceAsync result: id={deviceId}, success={enabled}");
+
             return enabled;
         }
-        catch
+        catch (Exception ex)
         {
+            AppendDiag($"EnableDeviceAsync exception: id={deviceId}, msg={ex}");
             return false;
         }
     }
@@ -313,6 +347,12 @@ public class AudioDeviceService : IDisposable
         if (await TryInvokeOptionalMethodAsync(type, runtimeType, "Disable"))
             return true;
 
+        if (await TryInvokeOptionalMethodAsync(type, runtimeType, "ChangeStateAsync", "Disabled"))
+            return true;
+
+        if (await TryInvokeOptionalMethodAsync(type, runtimeType, "ChangeState", "Disabled"))
+            return true;
+
         return await TrySetDeviceStateViaReflectionAsync(type, runtimeType, "Disabled");
     }
 
@@ -327,23 +367,38 @@ public class AudioDeviceService : IDisposable
         if (await TryInvokeOptionalMethodAsync(type, runtimeType, "Enable"))
             return true;
 
+        if (await TryInvokeOptionalMethodAsync(type, runtimeType, "ChangeStateAsync", "Active"))
+            return true;
+
+        if (await TryInvokeOptionalMethodAsync(type, runtimeType, "ChangeState", "Active"))
+            return true;
+
         return await TrySetDeviceStateViaReflectionAsync(type, runtimeType, "Active");
     }
 
-    private static async Task<bool> TryInvokeOptionalMethodAsync(object instance, Type runtimeType, string methodName)
+    private static async Task<bool> TryInvokeOptionalMethodAsync(object instance, Type runtimeType, string methodName, string? desiredStateName = null)
     {
         var methods = runtimeType.GetMethods().Where(m => m.Name == methodName).ToList();
+        AppendDiag($"TryInvokeOptionalMethodAsync probing: type={runtimeType.FullName}, method={methodName}, overloads={methods.Count}");
         foreach (var method in methods)
         {
-            var args = TryBuildBestEffortArguments(method);
+            var args = TryBuildBestEffortArguments(method, desiredStateName);
             if (args == null)
                 continue;
 
-            var result = method.Invoke(instance, args);
-            if (result is Task task)
-                await task;
+            try
+            {
+                var result = method.Invoke(instance, args);
+                if (result is Task task)
+                    await task;
 
-            return true;
+                AppendDiag($"TryInvokeOptionalMethodAsync success: type={runtimeType.FullName}, method={methodName}, sig={method}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                AppendDiag($"TryInvokeOptionalMethodAsync failed-overload: type={runtimeType.FullName}, method={methodName}, sig={method}, msg={ex.Message}");
+            }
         }
 
         return false;
@@ -351,12 +406,18 @@ public class AudioDeviceService : IDisposable
 
     private static async Task<bool> TrySetDeviceStateViaReflectionAsync(object instance, Type runtimeType, string desiredStateName)
     {
+        bool anyStateMethod = false;
         foreach (var methodName in new[] { "SetStateAsync", "SetState" })
         {
             var candidates = runtimeType
                 .GetMethods()
                 .Where(m => m.Name == methodName && m.GetParameters().Length >= 1)
                 .ToList();
+
+            if (candidates.Count > 0)
+                anyStateMethod = true;
+
+            AppendDiag($"TrySetDeviceStateViaReflectionAsync probing: type={runtimeType.FullName}, method={methodName}, overloads={candidates.Count}, state={desiredStateName}");
 
             foreach (var method in candidates)
             {
@@ -402,18 +463,49 @@ public class AudioDeviceService : IDisposable
                 if (!canInvoke)
                     continue;
 
-                var result = method.Invoke(instance, args);
-                if (result is Task task)
-                    await task;
+                try
+                {
+                    var result = method.Invoke(instance, args);
+                    if (result is Task task)
+                        await task;
 
-                return true;
+                    AppendDiag($"TrySetDeviceStateViaReflectionAsync success: type={runtimeType.FullName}, method={methodName}, state={desiredStateName}, sig={method}");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    AppendDiag($"TrySetDeviceStateViaReflectionAsync failed-overload: type={runtimeType.FullName}, method={methodName}, state={desiredStateName}, sig={method}, msg={ex.Message}");
+                }
             }
         }
+
+        // Some API variants may expose writable State instead of helper methods.
+        var stateProp = runtimeType.GetProperty("State");
+        if (stateProp != null && stateProp.CanWrite)
+        {
+            try
+            {
+                var stateValue = ConvertStateValue(stateProp.PropertyType, desiredStateName);
+                if (stateValue != null)
+                {
+                    stateProp.SetValue(instance, stateValue);
+                    AppendDiag($"TrySetDeviceStateViaReflectionAsync success via State property: type={runtimeType.FullName}, state={desiredStateName}");
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                AppendDiag($"TrySetDeviceStateViaReflectionAsync failed State property: type={runtimeType.FullName}, state={desiredStateName}, msg={ex.Message}");
+            }
+        }
+
+        if (!anyStateMethod)
+            AppendDiag($"TrySetDeviceStateViaReflectionAsync no state methods found: type={runtimeType.FullName}, state={desiredStateName}");
 
         return false;
     }
 
-    private static object?[]? TryBuildBestEffortArguments(System.Reflection.MethodInfo method)
+    private static object?[]? TryBuildBestEffortArguments(System.Reflection.MethodInfo method, string? desiredStateName)
     {
         var parameters = method.GetParameters();
         var args = new object?[parameters.Length];
@@ -421,6 +513,16 @@ public class AudioDeviceService : IDisposable
         for (int i = 0; i < parameters.Length; i++)
         {
             var p = parameters[i];
+            if (i == 0 && desiredStateName != null)
+            {
+                var stateValue = ConvertStateValue(p.ParameterType, desiredStateName);
+                if (stateValue != null)
+                {
+                    args[i] = stateValue;
+                    continue;
+                }
+            }
+
             if (p.IsOptional)
             {
                 args[i] = p.DefaultValue == DBNull.Value
@@ -437,9 +539,133 @@ public class AudioDeviceService : IDisposable
         return args;
     }
 
+    private static object? ConvertStateValue(Type parameterType, string desiredStateName)
+    {
+        if (parameterType.IsEnum)
+        {
+            var exact = Enum.GetNames(parameterType)
+                .FirstOrDefault(n => string.Equals(n, desiredStateName, StringComparison.OrdinalIgnoreCase));
+            if (exact != null)
+                return Enum.Parse(parameterType, exact, ignoreCase: true);
+            return null;
+        }
+
+        if (parameterType == typeof(int))
+            return string.Equals(desiredStateName, "Active", StringComparison.OrdinalIgnoreCase) ? 1 : 2;
+
+        return null;
+    }
+
     private static object? GetTypeDefault(Type type)
     {
         if (!type.IsValueType) return null;
         return Activator.CreateInstance(type);
+    }
+
+    private static async Task<bool> TryEnableViaPnpDeviceAsync(string friendlyName)
+    {
+        await _pnpEnableLock.WaitAsync();
+        try
+        {
+            var escaped = friendlyName.Replace("'", "''");
+            var script = "$name = '" + escaped + "'; " +
+                         "$d = Get-PnpDevice -Class AudioEndpoint | Where-Object { $_.FriendlyName -eq $name -and $_.Status -ne 'OK' } | Select-Object -First 1; " +
+                         "if ($d) { Enable-PnpDevice -InstanceId $d.InstanceId -Confirm:$false -ErrorAction Stop; exit 0 } else { exit 1 }";
+
+            var isElevated = IsProcessElevated();
+            var psi = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"" + script + "\"",
+                UseShellExecute = !isElevated,
+                CreateNoWindow = isElevated
+            };
+
+            if (isElevated)
+            {
+                psi.RedirectStandardOutput = true;
+                psi.RedirectStandardError = true;
+            }
+            else
+            {
+                psi.Verb = "runas";
+            }
+
+            using var process = Process.Start(psi);
+            if (process == null)
+                return false;
+
+            try
+            {
+                await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(15));
+            }
+            catch (TimeoutException)
+            {
+                try
+                {
+                    if (!process.HasExited)
+                        process.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                }
+
+                AppendDiag($"TryEnableViaPnpDeviceAsync timeout: name={friendlyName}");
+                return false;
+            }
+
+            string stdout = string.Empty;
+            string stderr = string.Empty;
+            if (isElevated)
+            {
+                stdout = await process.StandardOutput.ReadToEndAsync();
+                stderr = await process.StandardError.ReadToEndAsync();
+            }
+
+            AppendDiag($"TryEnableViaPnpDeviceAsync exit={process.ExitCode}, name={friendlyName}, elevated={isElevated}, out={stdout.Trim()}, err={stderr.Trim()}");
+            return process.ExitCode == 0;
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            AppendDiag($"TryEnableViaPnpDeviceAsync elevation-cancelled: name={friendlyName}");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            AppendDiag($"TryEnableViaPnpDeviceAsync exception: name={friendlyName}, msg={ex}");
+            return false;
+        }
+        finally
+        {
+            _pnpEnableLock.Release();
+        }
+    }
+
+    private static void AppendDiag(string message)
+    {
+        try
+        {
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundSwitchLite");
+            Directory.CreateDirectory(dir);
+            var file = Path.Combine(dir, "device-debug.log");
+            File.AppendAllText(file, DateTime.UtcNow.ToString("o") + " " + message + Environment.NewLine);
+        }
+        catch
+        {
+        }
+    }
+
+    private static bool IsProcessElevated()
+    {
+        try
+        {
+            using var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

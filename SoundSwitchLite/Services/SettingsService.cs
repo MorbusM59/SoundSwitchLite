@@ -14,10 +14,6 @@ public class AppSettings
     public List<string> UnusedOutputDeviceIds { get; set; } = new();
     /// <summary>Device IDs that have been sent to the "unused" pool for input devices.</summary>
     public List<string> UnusedInputDeviceIds { get; set; } = new();
-    /// <summary>Output device IDs that are disabled in Windows and shown in the disabled pool.</summary>
-    public List<string> DisabledOutputDeviceIds { get; set; } = new();
-    /// <summary>Input device IDs that are disabled in Windows and shown in the disabled pool.</summary>
-    public List<string> DisabledInputDeviceIds { get; set; } = new();
     /// <summary>Master volume percentage (0–100). Defaults to 100.</summary>
     public int MasterVolume { get; set; } = 100;
     /// <summary>Input master volume percentage (0–100). Defaults to 100.</summary>
