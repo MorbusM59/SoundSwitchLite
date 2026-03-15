@@ -466,10 +466,15 @@
                     <Style TargetType="Border">
                         <Setter Property="BorderBrush" Value="{Binding IsActive, Converter={StaticResource ActiveBorderBrush}}"/>
                         <Setter Property="Background" Value="{DynamicResource ColorCardBackground}"/>
+                        <Setter Property="Opacity" Value="1"/>
                         <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
+                                <Setter Property="Opacity" Value="0.55"/>
+                            </DataTrigger>
                             <DataTrigger Binding="{Binding IsArmedForDeletion}" Value="True">
                                 <Setter Property="BorderBrush" Value="{DynamicResource ColorDangerBorder}"/>
                                 <Setter Property="Background" Value="{DynamicResource ColorDangerBackground}"/>
+                                <Setter Property="Opacity" Value="1"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>

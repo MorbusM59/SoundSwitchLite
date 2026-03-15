@@ -24,6 +24,7 @@ namespace SoundSwitchLite;
 public class DeviceSlotViewModel : INotifyPropertyChanged
 {
     private bool _isActive;
+    private bool _isUnavailable;
     private AudioDevice? _selectedDevice;
     private bool _isListening;
     private string _hotkeyDisplay = "Click to assign hotkey";
@@ -46,6 +47,12 @@ public class DeviceSlotViewModel : INotifyPropertyChanged
     {
         get => _isActive;
         set { _isActive = value; OnPropertyChanged(); }
+    }
+
+    public bool IsUnavailable
+    {
+        get => _isUnavailable;
+        set { _isUnavailable = value; OnPropertyChanged(); }
     }
 
     public AudioDevice? SelectedDevice
@@ -547,7 +554,21 @@ public partial class MainWindow : Window
             RegisterSlotHotkey(slot);
         }
         var device = allDevices.FirstOrDefault(d => d.Id == mapping.DeviceId);
-        if (device != null) slot.SelectedDevice = device;
+        if (device != null)
+        {
+            slot.SelectedDevice = device;
+            slot.IsUnavailable = false;
+        }
+        else if (!string.IsNullOrWhiteSpace(mapping.DeviceId))
+        {
+            // Keep a placeholder device so the slot remains fully mapped while disconnected.
+            slot.SelectedDevice = new AudioDevice
+            {
+                Id = mapping.DeviceId,
+                Name = string.IsNullOrWhiteSpace(mapping.DeviceName) ? "Unavailable device" : mapping.DeviceName
+            };
+            slot.IsUnavailable = true;
+        }
     }
 
     private void RefreshSlotDevices(IEnumerable<DeviceSlotViewModel> slots, List<AudioDevice> allDevices, ObservableCollection<AudioDevice> unused)
@@ -565,6 +586,12 @@ public partial class MainWindow : Window
                     var canonical = allDevices.FirstOrDefault(d => d.Id == slot.SelectedDevice.Id);
                     if (canonical != null && !ReferenceEquals(canonical, slot.SelectedDevice))
                         slot.SelectedDevice = canonical;
+
+                    slot.IsUnavailable = canonical == null;
+                }
+                else
+                {
+                    slot.IsUnavailable = false;
                 }
             }
 
@@ -665,6 +692,11 @@ public partial class MainWindow : Window
     private async Task ActivateSlotDeviceAsync(DeviceSlotViewModel slot)
     {
         if (slot.SelectedDevice == null) return;
+        if (slot.IsUnavailable)
+        {
+            ShowBalloon($"Device unavailable: {slot.SelectedDevice.Name}");
+            return;
+        }
         var sameDomainSlots = slot.IsInput ? _viewModel.InputSlots : _viewModel.OutputSlots;
         var sourceSlot = sameDomainSlots.FirstOrDefault(s => s.IsActive && s.SelectedDevice != null);
         int currentWindowsVolume = slot.IsInput ? _viewModel.InputMasterVolume : _viewModel.MasterVolume;
