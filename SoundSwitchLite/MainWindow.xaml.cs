@@ -1237,18 +1237,38 @@ public partial class MainWindow : Window
                     if (slot.HotkeyId >= 0) _hotkeyService.UnregisterHotkey(slot.HotkeyId);
                     if (_listeningSlot == slot) _listeningSlot = null;
 
+                    // Purge from "Unused" pools by id to avoid stale exclusions when re-adding.
+                    var removedId = slot.SelectedDevice?.Id;
+
                     if (slot.IsInput)
                     {
+                        if (!string.IsNullOrEmpty(removedId))
+                        {
+                            var stale = _viewModel.UnusedInputDevices.FirstOrDefault(d => d.Id == removedId);
+                            if (stale != null) _viewModel.UnusedInputDevices.Remove(stale);
+                        }
+
                         _viewModel.InputSlots.Remove(slot);
                         RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
                         UpdateInputAddButtonVisibility();
                     }
                     else
                     {
+                        if (!string.IsNullOrEmpty(removedId))
+                        {
+                            var stale = _viewModel.UnusedOutputDevices.FirstOrDefault(d => d.Id == removedId);
+                            if (stale != null) _viewModel.UnusedOutputDevices.Remove(stale);
+                        }
+
                         _viewModel.OutputSlots.Remove(slot);
                         RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
                         UpdateOutputAddButtonVisibility();
                     }
+
+                    _viewModel.NotifyUnusedChanged();
+
+                    // Re-sync from system so newly freed devices immediately show as addable.
+                    _ = HandleDeviceChangedAsync();
                     SaveSettings();
                 }
                 e.Handled = true;
