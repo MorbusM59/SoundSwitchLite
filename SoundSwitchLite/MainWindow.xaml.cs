@@ -111,6 +111,8 @@ public class MainWindowViewModel : INotifyPropertyChanged
     public ObservableCollection<DeviceSlotViewModel> InputSlots { get; } = new();
     public ObservableCollection<AudioDevice> UnusedOutputDevices { get; } = new();
     public ObservableCollection<AudioDevice> UnusedInputDevices { get; } = new();
+    public ObservableCollection<AudioDevice> DisabledOutputDevices { get; } = new();
+    public ObservableCollection<AudioDevice> DisabledInputDevices { get; } = new();
 
     public int MasterVolume
     {
@@ -172,12 +174,22 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
     public int UnusedOutputCount => UnusedOutputDevices.Count;
     public int UnusedInputCount => UnusedInputDevices.Count;
-    public bool HasNoUnusedDevices => UnusedOutputDevices.Count == 0 && UnusedInputDevices.Count == 0;
+    public int DisabledOutputCount => DisabledOutputDevices.Count;
+    public int DisabledInputCount => DisabledInputDevices.Count;
+    public bool HasUnusedDevices => UnusedOutputDevices.Count > 0 || UnusedInputDevices.Count > 0;
+    public bool HasDisabledDevices => DisabledOutputDevices.Count > 0 || DisabledInputDevices.Count > 0;
+    public bool HasNoUnusedDevices =>
+        UnusedOutputDevices.Count == 0 && UnusedInputDevices.Count == 0 &&
+        DisabledOutputDevices.Count == 0 && DisabledInputDevices.Count == 0;
 
     public void NotifyUnusedChanged()
     {
         OnPropertyChanged(nameof(UnusedOutputCount));
         OnPropertyChanged(nameof(UnusedInputCount));
+        OnPropertyChanged(nameof(DisabledOutputCount));
+        OnPropertyChanged(nameof(DisabledInputCount));
+        OnPropertyChanged(nameof(HasUnusedDevices));
+        OnPropertyChanged(nameof(HasDisabledDevices));
         OnPropertyChanged(nameof(HasNoUnusedDevices));
     }
 
@@ -230,6 +242,7 @@ public partial class MainWindow : Window
     private bool _suppressMasterVolumeApply;
     private Slider? _draggingSlider;
     private ThemeMode _themeMode = ThemeMode.System;
+    private double _lastNormalWindowHeight = 400;
 
     // Info auto-hide timer (removed — info moved to separate tab)
 
@@ -292,6 +305,11 @@ public partial class MainWindow : Window
             _allInputDevices = (await _audioService.GetCaptureDevicesAsync()).ToList();
 
             var settings = _settingsService.Load();
+            if (settings.WindowHeight >= MinHeight)
+            {
+                Height = settings.WindowHeight;
+                _lastNormalWindowHeight = settings.WindowHeight;
+            }
             _viewModel.MasterVolume = settings.MasterVolume;
             _viewModel.InputMasterVolume = settings.InputMasterVolume;
             _themeMode = ParseThemeMode(settings.ThemeMode);
@@ -309,7 +327,8 @@ public partial class MainWindow : Window
                 var d = _allInputDevices.FirstOrDefault(x => x.Id == id);
                 if (d != null) _viewModel.UnusedInputDevices.Add(d);
             }
-            _viewModel.NotifyUnusedChanged();
+
+            await SyncDisabledDevicePoolsAsync();
 
             // Restore output slots from all saved mappings so card count persists across restarts.
             var outputMappings = settings.DeviceMappings;
@@ -391,6 +410,58 @@ public partial class MainWindow : Window
     {
         if (_loaded && (bool)e.NewValue)
             _ = SyncStateFromSystemAsync();
+    }
+
+    private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (WindowState != WindowState.Normal)
+            return;
+
+        if (Height >= MinHeight)
+            _lastNormalWindowHeight = Height;
+    }
+
+    private async Task SyncDisabledDevicePoolsAsync()
+    {
+        var disabledOutputs = (await _audioService.GetDisabledPlaybackDevicesAsync())
+            .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var disabledInputs = (await _audioService.GetDisabledCaptureDevicesAsync())
+            .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        ReplaceDeviceCollection(_viewModel.DisabledOutputDevices, disabledOutputs);
+        ReplaceDeviceCollection(_viewModel.DisabledInputDevices, disabledInputs);
+        _viewModel.NotifyUnusedChanged();
+    }
+
+    private static void ReplaceDeviceCollection(ObservableCollection<AudioDevice> target, List<AudioDevice> source)
+    {
+        var sourceById = source.ToDictionary(d => d.Id, d => d);
+
+        foreach (var existing in target.Where(d => !sourceById.ContainsKey(d.Id)).ToList())
+            target.Remove(existing);
+
+        for (int i = 0; i < source.Count; i++)
+        {
+            var src = source[i];
+            var existingIndex = target
+                .Select((d, idx) => new { d, idx })
+                .FirstOrDefault(x => x.d.Id == src.Id)?.idx;
+
+            if (existingIndex is int idx)
+            {
+                if (target[idx].Name != src.Name)
+                    target[idx] = src;
+
+                if (idx != i)
+                    target.Move(idx, i);
+            }
+            else
+            {
+                target.Insert(Math.Min(i, target.Count), src);
+            }
+        }
     }
 
     private async Task PollSystemVolumeAsync()
@@ -1171,6 +1242,26 @@ public partial class MainWindow : Window
         SaveSettings();
     }
 
+    private void DisableUnusedOutputDevice_ButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is AudioDevice device)
+            _ = DisableUnusedOutputDeviceCoreAsync(device);
+    }
+
+    private async Task DisableUnusedOutputDeviceCoreAsync(AudioDevice device)
+    {
+        var disabled = await _audioService.DisableDeviceAsync(device.Id, isCapture: false);
+        if (!disabled) return;
+
+        _viewModel.UnusedOutputDevices.Remove(device);
+
+        _allOutputDevices = (await _audioService.GetPlaybackDevicesAsync()).ToList();
+        RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
+        UpdateOutputAddButtonVisibility();
+        await SyncDisabledDevicePoolsAsync();
+        SaveSettings();
+    }
+
     private void RestoreInputDevice_Click(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement fe && fe.Tag is AudioDevice device)
@@ -1194,9 +1285,135 @@ public partial class MainWindow : Window
         SaveSettings();
     }
 
+    private void DisableUnusedInputDevice_ButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is AudioDevice device)
+            _ = DisableUnusedInputDeviceCoreAsync(device);
+    }
+
+    private async Task DisableUnusedInputDeviceCoreAsync(AudioDevice device)
+    {
+        var disabled = await _audioService.DisableDeviceAsync(device.Id, isCapture: true);
+        if (!disabled) return;
+
+        _viewModel.UnusedInputDevices.Remove(device);
+
+        _allInputDevices = (await _audioService.GetCaptureDevicesAsync()).ToList();
+        RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
+        UpdateInputAddButtonVisibility();
+        await SyncDisabledDevicePoolsAsync();
+        SaveSettings();
+    }
+
+    private void RestoreDisabledOutputDevice_ButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is AudioDevice device)
+            _ = RestoreDisabledOutputDeviceCoreAsync(device);
+    }
+
+    private async Task RestoreDisabledOutputDeviceCoreAsync(AudioDevice device)
+    {
+        await _audioService.EnableDeviceAsync(device.Id, isCapture: false);
+        await SyncDisabledDevicePoolsAsync();
+
+        if (_viewModel.DisabledOutputDevices.Any(d => d.Id == device.Id))
+        {
+            ShowBalloon($"Unable to enable device: {device.Name}");
+            return;
+        }
+
+        _allOutputDevices = (await _audioService.GetPlaybackDevicesAsync()).ToList();
+
+        var restoredDevice = _allOutputDevices.FirstOrDefault(d => d.Id == device.Id) ?? device;
+        if (!_viewModel.UnusedOutputDevices.Any(d => d.Id == restoredDevice.Id))
+            _viewModel.UnusedOutputDevices.Add(restoredDevice);
+
+        RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
+        UpdateOutputAddButtonVisibility();
+        _viewModel.NotifyUnusedChanged();
+        SaveSettings();
+    }
+
+    private void RestoreDisabledInputDevice_ButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is AudioDevice device)
+            _ = RestoreDisabledInputDeviceCoreAsync(device);
+    }
+
+    private async Task RestoreDisabledInputDeviceCoreAsync(AudioDevice device)
+    {
+        await _audioService.EnableDeviceAsync(device.Id, isCapture: true);
+        await SyncDisabledDevicePoolsAsync();
+
+        if (_viewModel.DisabledInputDevices.Any(d => d.Id == device.Id))
+        {
+            ShowBalloon($"Unable to enable device: {device.Name}");
+            return;
+        }
+
+        _allInputDevices = (await _audioService.GetCaptureDevicesAsync()).ToList();
+
+        var restoredDevice = _allInputDevices.FirstOrDefault(d => d.Id == device.Id) ?? device;
+        if (!_viewModel.UnusedInputDevices.Any(d => d.Id == restoredDevice.Id))
+            _viewModel.UnusedInputDevices.Add(restoredDevice);
+
+        RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
+        UpdateInputAddButtonVisibility();
+        _viewModel.NotifyUnusedChanged();
+        SaveSettings();
+    }
+
+    private void DisableUnusedDevices_Click(object sender, RoutedEventArgs e)
+    {
+        _ = DisableUnusedDevices_ClickAsync();
+    }
+
+    private async Task DisableUnusedDevices_ClickAsync()
+    {
+        int totalTargets = _viewModel.UnusedOutputDevices.Count + _viewModel.UnusedInputDevices.Count;
+        if (totalTargets == 0)
+            return;
+
+        int disabledCount = 0;
+
+        foreach (var device in _viewModel.UnusedOutputDevices.ToList())
+        {
+            if (await _audioService.DisableDeviceAsync(device.Id, isCapture: false))
+            {
+                disabledCount++;
+                _viewModel.UnusedOutputDevices.Remove(device);
+            }
+        }
+
+        foreach (var device in _viewModel.UnusedInputDevices.ToList())
+        {
+            if (await _audioService.DisableDeviceAsync(device.Id, isCapture: true))
+            {
+                disabledCount++;
+                _viewModel.UnusedInputDevices.Remove(device);
+            }
+        }
+
+        _allOutputDevices = (await _audioService.GetPlaybackDevicesAsync()).ToList();
+        _allInputDevices = (await _audioService.GetCaptureDevicesAsync()).ToList();
+
+        RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
+        RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
+        UpdateOutputAddButtonVisibility();
+        UpdateInputAddButtonVisibility();
+        await SyncDisabledDevicePoolsAsync();
+        SaveSettings();
+
+        ShowBalloon($"Disabled {disabledCount}/{totalTargets} unused devices in Windows.");
+    }
+
     private void TabOutput_Click(object sender, RoutedEventArgs e) => _viewModel.SelectedTab = "Output";
     private void TabInput_Click(object sender, RoutedEventArgs e) => _viewModel.SelectedTab = "Input";
-    private void TabUnused_Click(object sender, RoutedEventArgs e) => _viewModel.SelectedTab = "Unused";
+    private void TabUnused_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.SelectedTab = "Unused";
+        _ = SyncDisabledDevicePoolsAsync();
+    }
     private void TabInfo_Click(object sender, RoutedEventArgs e) => _viewModel.SelectedTab = "Info";
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -1433,11 +1650,14 @@ public partial class MainWindow : Window
             MasterVolume = _viewModel.MasterVolume,
             InputMasterVolume = _viewModel.InputMasterVolume,
             ThemeMode = SerializeThemeMode(_themeMode),
+            WindowHeight = _lastNormalWindowHeight,
             // Persist all slots so user-created cards survive restarts.
             DeviceMappings = _viewModel.OutputSlots.Select(MappingFromSlot).ToList(),
             InputDeviceMappings = _viewModel.InputSlots.Select(MappingFromSlot).ToList(),
             UnusedOutputDeviceIds = _viewModel.UnusedOutputDevices.Select(d => d.Id).ToList(),
-            UnusedInputDeviceIds = _viewModel.UnusedInputDevices.Select(d => d.Id).ToList()
+            UnusedInputDeviceIds = _viewModel.UnusedInputDevices.Select(d => d.Id).ToList(),
+            DisabledOutputDeviceIds = _viewModel.DisabledOutputDevices.Select(d => d.Id).ToList(),
+            DisabledInputDeviceIds = _viewModel.DisabledInputDevices.Select(d => d.Id).ToList()
         };
         _settingsService.Save(settings);
     }

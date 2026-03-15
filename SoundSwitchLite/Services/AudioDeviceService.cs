@@ -92,6 +92,18 @@ public class AudioDeviceService : IDisposable
         return devices.Select(d => new AudioDevice { Id = d.Id.ToString(), Name = d.FullName });
     }
 
+    public async Task<IEnumerable<AudioDevice>> GetDisabledPlaybackDevicesAsync()
+    {
+        var devices = await GetPlaybackDeviceObjectsByStateAsync(DeviceState.Disabled);
+        return devices.Select(d => new AudioDevice { Id = d.Id.ToString(), Name = d.FullName });
+    }
+
+    public async Task<IEnumerable<AudioDevice>> GetDisabledCaptureDevicesAsync()
+    {
+        var devices = await GetCaptureDeviceObjectsByStateAsync(DeviceState.Disabled);
+        return devices.Select(d => new AudioDevice { Id = d.Id.ToString(), Name = d.FullName });
+    }
+
     public async Task<string?> GetDefaultCaptureDeviceIdAsync()
     {
         if (_controller == null) return null;
@@ -135,6 +147,66 @@ public class AudioDeviceService : IDisposable
             return true;
         }
         catch { return false; }
+    }
+
+    public async Task<bool> DisableDeviceAsync(string deviceId, bool isCapture)
+    {
+        try
+        {
+            if (_controller == null) return false;
+
+            IEnumerable<dynamic> devices = isCapture
+                ? await _controller.GetCaptureDevicesAsync(DeviceState.Active)
+                : await _controller.GetPlaybackDevicesAsync(DeviceState.Active);
+
+            var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
+            if (device == null) return false;
+
+            var disabled = await TryDisableViaReflectionAsync(device);
+            if (disabled)
+            {
+                if (isCapture)
+                    _captureCache = null;
+                else
+                    _playbackCache = null;
+            }
+
+            return disabled;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> EnableDeviceAsync(string deviceId, bool isCapture)
+    {
+        try
+        {
+            if (_controller == null) return false;
+
+            IEnumerable<dynamic> devices = isCapture
+                ? await _controller.GetCaptureDevicesAsync(DeviceState.Disabled)
+                : await _controller.GetPlaybackDevicesAsync(DeviceState.Disabled);
+
+            var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceId);
+            if (device == null) return false;
+
+            var enabled = await TryEnableViaReflectionAsync(device);
+            if (enabled)
+            {
+                if (isCapture)
+                    _captureCache = null;
+                else
+                    _playbackCache = null;
+            }
+
+            return enabled;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>Reads the current volume of a playback device without using the cache.</summary>
@@ -213,5 +285,161 @@ public class AudioDeviceService : IDisposable
         _captureCache = devices.ToList();
         _captureCacheAt = DateTime.UtcNow;
         return _captureCache;
+    }
+
+    private async Task<IEnumerable<dynamic>> GetPlaybackDeviceObjectsByStateAsync(DeviceState state)
+    {
+        if (_controller == null) return Enumerable.Empty<dynamic>();
+        var devices = await _controller.GetPlaybackDevicesAsync(state);
+        return devices.ToList();
+    }
+
+    private async Task<IEnumerable<dynamic>> GetCaptureDeviceObjectsByStateAsync(DeviceState state)
+    {
+        if (_controller == null) return Enumerable.Empty<dynamic>();
+        var devices = await _controller.GetCaptureDevicesAsync(state);
+        return devices.ToList();
+    }
+
+    private static async Task<bool> TryDisableViaReflectionAsync(dynamic device)
+    {
+        var type = (object)device;
+        var runtimeType = type.GetType();
+
+        // Cover different AudioSwitcher versions by probing known API names.
+        if (await TryInvokeOptionalMethodAsync(type, runtimeType, "DisableAsync"))
+            return true;
+
+        if (await TryInvokeOptionalMethodAsync(type, runtimeType, "Disable"))
+            return true;
+
+        return await TrySetDeviceStateViaReflectionAsync(type, runtimeType, "Disabled");
+    }
+
+    private static async Task<bool> TryEnableViaReflectionAsync(dynamic device)
+    {
+        var type = (object)device;
+        var runtimeType = type.GetType();
+
+        if (await TryInvokeOptionalMethodAsync(type, runtimeType, "EnableAsync"))
+            return true;
+
+        if (await TryInvokeOptionalMethodAsync(type, runtimeType, "Enable"))
+            return true;
+
+        return await TrySetDeviceStateViaReflectionAsync(type, runtimeType, "Active");
+    }
+
+    private static async Task<bool> TryInvokeOptionalMethodAsync(object instance, Type runtimeType, string methodName)
+    {
+        var methods = runtimeType.GetMethods().Where(m => m.Name == methodName).ToList();
+        foreach (var method in methods)
+        {
+            var args = TryBuildBestEffortArguments(method);
+            if (args == null)
+                continue;
+
+            var result = method.Invoke(instance, args);
+            if (result is Task task)
+                await task;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private static async Task<bool> TrySetDeviceStateViaReflectionAsync(object instance, Type runtimeType, string desiredStateName)
+    {
+        foreach (var methodName in new[] { "SetStateAsync", "SetState" })
+        {
+            var candidates = runtimeType
+                .GetMethods()
+                .Where(m => m.Name == methodName && m.GetParameters().Length >= 1)
+                .ToList();
+
+            foreach (var method in candidates)
+            {
+                var parameters = method.GetParameters();
+                var parameterType = parameters[0].ParameterType;
+                object? stateArgument = null;
+
+                if (parameterType.IsEnum)
+                {
+                    var names = Enum.GetNames(parameterType);
+                    var exact = names.FirstOrDefault(n => string.Equals(n, desiredStateName, StringComparison.OrdinalIgnoreCase));
+                    if (exact != null)
+                        stateArgument = Enum.Parse(parameterType, exact, ignoreCase: true);
+                }
+                else if (parameterType == typeof(int))
+                {
+                    stateArgument = string.Equals(desiredStateName, "Active", StringComparison.OrdinalIgnoreCase) ? 1 : 2;
+                }
+
+                if (stateArgument == null)
+                    continue;
+
+                var args = new object?[parameters.Length];
+                args[0] = stateArgument;
+
+                bool canInvoke = true;
+                for (int i = 1; i < parameters.Length; i++)
+                {
+                    var p = parameters[i];
+                    if (p.IsOptional)
+                    {
+                        args[i] = p.DefaultValue == DBNull.Value
+                            ? GetTypeDefault(p.ParameterType)
+                            : p.DefaultValue;
+                    }
+                    else
+                    {
+                        canInvoke = false;
+                        break;
+                    }
+                }
+
+                if (!canInvoke)
+                    continue;
+
+                var result = method.Invoke(instance, args);
+                if (result is Task task)
+                    await task;
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static object?[]? TryBuildBestEffortArguments(System.Reflection.MethodInfo method)
+    {
+        var parameters = method.GetParameters();
+        var args = new object?[parameters.Length];
+
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            var p = parameters[i];
+            if (p.IsOptional)
+            {
+                args[i] = p.DefaultValue == DBNull.Value
+                    ? GetTypeDefault(p.ParameterType)
+                    : p.DefaultValue;
+            }
+            else
+            {
+                // Best-effort defaults for required parameters (e.g., CancellationToken, bool flags).
+                args[i] = GetTypeDefault(p.ParameterType);
+            }
+        }
+
+        return args;
+    }
+
+    private static object? GetTypeDefault(Type type)
+    {
+        if (!type.IsValueType) return null;
+        return Activator.CreateInstance(type);
     }
 }
