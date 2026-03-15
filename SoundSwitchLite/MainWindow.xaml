@@ -47,7 +47,7 @@
         <SolidColorBrush x:Key="ColorDangerBackground" Color="#3A1A22" po:Freeze="False"/>
         <SolidColorBrush x:Key="ColorCloseHover" Color="#CC3355" po:Freeze="False"/>
 
-        <CornerRadius x:Key="RadiusWindow">12</CornerRadius>
+        <CornerRadius x:Key="RadiusWindow">12,12,0,12</CornerRadius>
         <CornerRadius x:Key="RadiusTitlebar">12,12,0,0</CornerRadius>
         <CornerRadius x:Key="RadiusTabbar">0,0,12,12</CornerRadius>
         <CornerRadius x:Key="RadiusCard">12</CornerRadius>
@@ -398,14 +398,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" Margin="2,2,2,3">
-                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <Border Height="3" CornerRadius="2"
-                                        Background="{TemplateBinding Foreground}"
-                                        Opacity="0" x:Name="Indicator"
-                                        Margin="20,0"/>
-                                <ContentPresenter HorizontalAlignment="Center"/>
-                            </StackPanel>
+                        <Border Background="{TemplateBinding Background}" Margin="2">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -421,14 +415,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="0,0,0,12" Margin="2,2,2,3">
-                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <Border Height="3" CornerRadius="2"
-                                        Background="{TemplateBinding Foreground}"
-                                        Opacity="0" x:Name="Indicator"
-                                        Margin="20,0"/>
-                                <ContentPresenter HorizontalAlignment="Center"/>
-                            </StackPanel>
+                        <Border Background="{TemplateBinding Background}" CornerRadius="0,0,0,12" Margin="2">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
