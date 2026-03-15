@@ -284,6 +284,24 @@ public class AudioDeviceService : IDisposable
         catch { return null; }
     }
 
+    /// <summary>
+    /// Subscribe to device change notifications (add/remove/default change/state change).
+    /// Callback receives the raw DeviceChangedArgs from AudioSwitcher.
+    /// </summary>
+    public IDisposable? SubscribeDeviceChanged(Action<AudioSwitcher.AudioApi.DeviceChangedArgs> onDeviceChanged)
+    {
+        if (_controller == null) return null;
+        try
+        {
+            var observable = ((AudioSwitcher.AudioApi.IAudioController)_controller).AudioDeviceChanged;
+            return observable.Subscribe(new DelegateObserver<AudioSwitcher.AudioApi.DeviceChangedArgs>(e =>
+            {
+                try { onDeviceChanged(e); } catch { }
+            }));
+        }
+        catch { return null; }
+    }
+
     private sealed class DelegateObserver<T> : IObserver<T>
     {
         private readonly Action<T> _onNext;

@@ -235,6 +235,7 @@ public partial class MainWindow : Window
     private ThemeMode _themeMode = ThemeMode.System;
     private double _lastNormalWindowHeight = 400;
     private readonly SemaphoreSlim _windowsDeviceOperationLock = new(1, 1);
+    private IDisposable? _deviceChangedSubscription;
 
     // Info auto-hide timer (removed — info moved to separate tab)
 
@@ -354,6 +355,18 @@ public partial class MainWindow : Window
             await RefreshActiveDevice();
             UpdateOutputAddButtonVisibility();
             UpdateInputAddButtonVisibility();
+
+            // Ensure the current system default device is represented in the UI on startup.
+            // This mirrors the behavior performed for runtime device-change events.
+            await HandleDeviceChangedAsync();
+
+            // Subscribe to system device change notifications so the UI can react to newly connected devices.
+            _deviceChangedSubscription = _audioService.SubscribeDeviceChanged(async e =>
+            {
+                // Debounce a little to let the system settle
+                await Task.Delay(200);
+                await Dispatcher.InvokeAsync(async () => await HandleDeviceChangedAsync());
+            });
         }
         catch (Exception ex)
         {
@@ -542,6 +555,19 @@ public partial class MainWindow : Window
         _isRefreshingDevices = true;
         try
         {
+            // Ensure each slot's SelectedDevice references the canonical instance from the
+            // freshly enumerated device list. This prevents WPF ComboBox from losing the
+            // SelectedItem when ItemsSource is replaced with new instances.
+            foreach (var slot in slots)
+            {
+                if (slot.SelectedDevice != null)
+                {
+                    var canonical = allDevices.FirstOrDefault(d => d.Id == slot.SelectedDevice.Id);
+                    if (canonical != null && !ReferenceEquals(canonical, slot.SelectedDevice))
+                        slot.SelectedDevice = canonical;
+                }
+            }
+
             // IDs already assigned to some slot — used to prevent duplicates across dropdowns.
             var usedIds = slots.Where(s => s.SelectedDevice != null).Select(s => s.SelectedDevice!.Id).ToHashSet();
 
@@ -568,11 +594,25 @@ public partial class MainWindow : Window
 
     private async Task RefreshActiveDevice()
     {
-        var defaultPlayback = await _audioService.GetDefaultDeviceIdAsync();
-        var defaultCapture = await _audioService.GetDefaultCaptureDeviceIdAsync();
+        try
+        {
+            var defaultPlayback = await _audioService.GetDefaultDeviceIdAsync();
+            var defaultCapture = await _audioService.GetDefaultCaptureDeviceIdAsync();
 
-        foreach (var s in _viewModel.OutputSlots) s.IsActive = s.SelectedDevice?.Id == defaultPlayback;
-        foreach (var s in _viewModel.InputSlots) s.IsActive = s.SelectedDevice?.Id == defaultCapture;
+            foreach (var s in _viewModel.OutputSlots)
+            {
+                s.IsActive = s.SelectedDevice?.Id == defaultPlayback;
+            }
+
+            foreach (var s in _viewModel.InputSlots)
+            {
+                s.IsActive = s.SelectedDevice?.Id == defaultCapture;
+            }
+        }
+        catch (Exception ex)
+        {
+            LogError(ex);
+        }
     }
 
     private void UpdateOutputAddButtonVisibility()
@@ -1315,6 +1355,7 @@ public partial class MainWindow : Window
     {
         _volumePollTimer?.Stop();
         SystemEvents.UserPreferenceChanged -= OnSystemUserPreferenceChanged;
+        _deviceChangedSubscription?.Dispose();
         base.OnClosed(e);
     }
 
@@ -1520,6 +1561,64 @@ public partial class MainWindow : Window
         
         };
         _settingsService.Save(settings);
+    }
+
+    private async Task HandleDeviceChangedAsync()
+    {
+        try
+        {
+            // Refresh full device lists
+            _allOutputDevices = (await _audioService.GetPlaybackDevicesAsync()).ToList();
+            _allInputDevices = (await _audioService.GetCaptureDevicesAsync()).ToList();
+
+            // Update dropdowns and add-button visibility
+            RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
+            RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
+            UpdateOutputAddButtonVisibility();
+            UpdateInputAddButtonVisibility();
+
+            // If Windows changed the default to a device we don't have a slot for, create one and mark it active.
+            var defaultOutputId = await _audioService.GetDefaultDeviceIdAsync();
+            if (!string.IsNullOrEmpty(defaultOutputId))
+            {
+                bool alreadyHas = _viewModel.OutputSlots.Any(s => s.SelectedDevice?.Id == defaultOutputId);
+                if (!alreadyHas)
+                {
+                    var dev = _allOutputDevices.FirstOrDefault(d => d.Id == defaultOutputId);
+                    if (dev != null)
+                    {
+                        var slot = CreateSlot(isInput: false);
+                        slot.SelectedDevice = dev;
+                        _viewModel.OutputSlots.Add(slot);
+                        RefreshSlotDevices(_viewModel.OutputSlots, _allOutputDevices, _viewModel.UnusedOutputDevices);
+                        SaveSettings();
+                    }
+                }
+            }
+
+            var defaultInputId = await _audioService.GetDefaultCaptureDeviceIdAsync();
+            if (!string.IsNullOrEmpty(defaultInputId))
+            {
+                bool alreadyHas = _viewModel.InputSlots.Any(s => s.SelectedDevice?.Id == defaultInputId);
+                if (!alreadyHas)
+                {
+                    var dev = _allInputDevices.FirstOrDefault(d => d.Id == defaultInputId);
+                    if (dev != null)
+                    {
+                        var slot = CreateSlot(isInput: true);
+                        slot.SelectedDevice = dev;
+                        _viewModel.InputSlots.Add(slot);
+                        RefreshSlotDevices(_viewModel.InputSlots, _allInputDevices, _viewModel.UnusedInputDevices);
+                        SaveSettings();
+                    }
+                }
+            }
+
+            // Always refresh active markers after a device-change event, even when
+            // the default device already has a slot.
+            await RefreshActiveDevice();
+        }
+        catch (Exception ex) { LogError(ex); }
     }
 
     private static DeviceMapping MappingFromSlot(DeviceSlotViewModel s) => new()
