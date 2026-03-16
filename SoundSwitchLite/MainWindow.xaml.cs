@@ -261,7 +261,7 @@ public partial class MainWindow : Window
     private bool _suppressMasterVolumeApply;
     private Slider? _draggingSlider;
     private ThemeMode _themeMode = ThemeMode.System;
-    private double _lastNormalWindowHeight = 400;
+    private double _lastNormalWindowHeight = 350;
     private readonly SemaphoreSlim _windowsDeviceOperationLock = new(1, 1);
     private IDisposable? _deviceChangedSubscription;
     private Point _dragStartPoint;
@@ -479,8 +479,11 @@ public partial class MainWindow : Window
 
     private void Window_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-        if (_loaded && (bool)e.NewValue)
+        if (!_loaded) return;
+        if ((bool)e.NewValue)
             _ = SyncStateFromSystemAsync();
+        else
+            SaveSettings(); // persist window height whenever the window is hidden to tray
     }
 
     private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -1634,6 +1637,7 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        SaveSettings(); // persist window height on full app exit
         _volumePollTimer?.Stop();
         SystemEvents.UserPreferenceChanged -= OnSystemUserPreferenceChanged;
         _deviceChangedSubscription?.Dispose();

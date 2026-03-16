@@ -20,8 +20,8 @@ public class AppSettings
     public int InputMasterVolume { get; set; } = 100;
     /// <summary>Theme mode: Dark, Light, or System. Defaults to System.</summary>
     public string ThemeMode { get; set; } = "System";
-    /// <summary>Main window height in normal state. Defaults to 400.</summary>
-    public double WindowHeight { get; set; } = 400;
+    /// <summary>Main window height in normal state. Defaults to 350.</summary>
+    public double WindowHeight { get; set; } = 350;
 }
 
 public class SettingsService
